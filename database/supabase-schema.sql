@@ -1,5 +1,5 @@
--- Schema MVP cho hệ thống chấm điểm kiểm tra hoạt động bệnh viện.
--- Nguyên tắc: ai có link web xem được dữ liệu đã công khai; mọi thao tác ghi phải đăng nhập và đúng quyền.
+-- Supabase schema for hospital activity audit scoring MVP.
+-- Principle: public/anonymous users can read public data; all writes require auth and role checks.
 
 create extension if not exists "pgcrypto";
 
@@ -253,7 +253,18 @@ create table report_exports (
   download_url text,
   exported_by uuid references profiles(id),
   exported_at timestamptz,
+  published_at timestamptz,
   summary_json jsonb not null default '{}'::jsonb
+);
+
+create table report_files (
+  id uuid primary key default gen_random_uuid(),
+  report_export_id uuid not null references report_exports(id) on delete cascade,
+  file_name text not null,
+  storage_path text not null,
+  download_url text,
+  created_by uuid references profiles(id),
+  created_at timestamptz not null default now()
 );
 
 create table import_batches (
@@ -290,6 +301,38 @@ create table audit_logs (
   user_agent text,
   created_at timestamptz not null default now()
 );
+
+create or replace function set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+create trigger set_profiles_updated_at before update on profiles
+for each row execute function set_updated_at();
+
+create trigger set_inspection_sessions_updated_at before update on inspection_sessions
+for each row execute function set_updated_at();
+
+create trigger set_inspection_scores_updated_at before update on inspection_scores
+for each row execute function set_updated_at();
+
+create or replace view public_profiles as
+select
+  id,
+  username,
+  full_name,
+  title_unit,
+  role,
+  department_id,
+  inspection_team_id,
+  is_active
+from profiles
+where is_active = true;
 
 create or replace function current_app_role()
 returns app_role
@@ -337,11 +380,15 @@ alter table inspection_scores enable row level security;
 alter table score_attachments enable row level security;
 alter table capa_updates enable row level security;
 alter table report_exports enable row level security;
+alter table report_files enable row level security;
 alter table import_batches enable row level security;
 alter table import_warnings enable row level security;
 alter table audit_logs enable row level security;
 
 -- Public read: anonymous users can read published/catalog data.
+create policy profiles_self_read on profiles for select using (auth.uid() = id or can_manage_system());
+create policy profiles_self_update on profiles for update using (auth.uid() = id or can_manage_system()) with check (auth.uid() = id or can_manage_system());
+create policy manage_profiles on profiles for all using (can_manage_system()) with check (can_manage_system());
 create policy public_read_departments on departments for select using (true);
 create policy public_read_teams on inspection_teams for select using (true);
 create policy public_read_templates on form_templates for select using (true);
@@ -351,9 +398,18 @@ create policy public_read_criteria on form_criteria_items for select using (true
 create policy public_read_periods on audit_periods for select using (true);
 create policy public_read_sessions on inspection_sessions for select using (true);
 create policy public_read_forms on inspection_forms for select using (true);
+create policy public_read_assignments on inspection_assignments for select using (true);
 create policy public_read_scores on inspection_scores for select using (true);
 create policy public_read_capa on capa_updates for select using (true);
 create policy public_read_reports on report_exports for select using (status in ('published', 'exported'));
+create policy public_read_report_files on report_files for select using (
+  exists (
+    select 1
+    from report_exports re
+    where re.id = report_export_id
+      and re.status in ('published', 'exported')
+  )
+);
 
 -- Protected write.
 create policy manage_departments on departments for all using (can_manage_system()) with check (can_manage_system());
@@ -368,6 +424,12 @@ create policy manage_assignments on inspection_assignments for all using (can_ma
 create policy import_by_admin_khth on import_batches for all using (can_manage_system()) with check (can_manage_system());
 create policy import_warning_by_admin_khth on import_warnings for all using (can_manage_system()) with check (can_manage_system());
 create policy export_by_admin_khth on report_exports for all using (can_manage_system()) with check (can_manage_system());
+create policy export_files_by_admin_khth on report_files for all using (can_manage_system()) with check (can_manage_system());
+
+create policy manage_forms on inspection_forms
+  for all
+  using (can_manage_system() or current_app_role() in ('truong_doan', 'pho_truong_doan', 'thu_ky_doan'))
+  with check (can_manage_system() or current_app_role() in ('truong_doan', 'pho_truong_doan', 'thu_ky_doan'));
 
 create policy insert_score_by_assignment on inspection_scores
   for insert
@@ -410,3 +472,59 @@ create policy insert_audit_logs_authenticated on audit_logs
 create policy read_audit_logs_admin_khth on audit_logs
   for select
   using (can_manage_system());
+
+create index idx_form_templates_public_lookup on form_templates (form_type, block_type, department_name, inspection_team_name, is_active);
+create index idx_form_criteria_template_order on form_criteria_items (form_template_id, order_index);
+create index idx_inspection_sessions_public_lookup on inspection_sessions (inspection_date, department_id, inspection_team_id, status);
+create index idx_inspection_scores_form_criteria on inspection_scores (inspection_form_id, form_criteria_item_id);
+create index idx_inspection_scores_risk_capa on inspection_scores (risk_level, capa_status, due_date);
+create index idx_report_exports_public on report_exports (status, audit_period_id, exported_at desc);
+create index idx_audit_logs_user_time on audit_logs (user_id, created_at desc);
+
+grant usage on schema public to anon, authenticated;
+
+grant select on
+  public_profiles,
+  departments,
+  inspection_teams,
+  form_templates,
+  form_header_fields,
+  criteria_groups,
+  form_criteria_items,
+  audit_periods,
+  inspection_sessions,
+  inspection_forms,
+  inspection_assignments,
+  inspection_scores,
+  score_attachments,
+  capa_updates,
+  report_exports,
+  report_files
+to anon, authenticated;
+
+grant select, update on profiles to authenticated;
+
+grant insert, update on
+  inspection_scores,
+  score_attachments,
+  capa_updates
+to authenticated;
+
+grant insert, update, delete on
+  departments,
+  inspection_teams,
+  form_templates,
+  form_header_fields,
+  criteria_groups,
+  form_criteria_items,
+  audit_periods,
+  inspection_sessions,
+  inspection_forms,
+  inspection_assignments,
+  report_exports,
+  report_files,
+  import_batches,
+  import_warnings
+to authenticated;
+
+grant insert on audit_logs to authenticated;
