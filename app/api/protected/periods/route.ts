@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { demoUserFromRequest } from "@/lib/api-auth";
+import { userFromRequest } from "@/lib/api-auth";
 import { assertCanWrite } from "../../../../services/access-control";
 import { updatePeriodStatus } from "../../../../services/repositories/periods-repository";
 
@@ -11,7 +11,7 @@ type PeriodActionPayload = {
 
 export async function POST(request: Request) {
   try {
-    const user = demoUserFromRequest(request);
+    const user = await userFromRequest(request);
     assertCanWrite(user, "period:close");
     const payload = (await request.json()) as PeriodActionPayload;
 
