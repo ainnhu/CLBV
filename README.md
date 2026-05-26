@@ -207,3 +207,12 @@ Khi triển khai thật, file xuất lưu vào Supabase Storage và metadata lư
 - Màn hình rà soát import Excel trước khi ghi database.
 - Upload minh chứng file/ảnh.
 - Render Excel có định dạng gần sheet gốc hơn, gồm logo, tiêu đề, vùng chữ ký nếu cần.
+## Cập nhật lõi ngày 26/05/2026
+
+- `database/supabase-schema.sql` đã bổ sung RLS public-read/protected-write rõ hơn, `public_profiles`, `report_files`, index và grant cho `anon/authenticated`.
+- `seed/initial-catalog.sql` dùng để nạp danh mục khoa/phòng, đoàn kiểm tra và kỳ kiểm tra 2026 sau khi chạy schema.
+- API protected hiện hỗ trợ 02 cách xác định người dùng:
+  - Prototype: header `x-demo-role`.
+  - Triển khai thật: `Authorization: Bearer <Supabase access token>`.
+- `src/lib/validation.ts` gom validation nghiệp vụ chấm điểm: điểm không âm, không vượt tối đa, điểm thấp phải có lý do, nguy cơ cao/nghiêm trọng phải có yêu cầu khắc phục/thời hạn/người hoặc bộ phận chịu trách nhiệm.
+- Export Excel đã có các sheet nghiệp vụ chính: `DASHBOARD_THONG_KE`, `TONG_HOP_DIEM`, `PHIEU_CHI_TIET`, `CHI_TIET_TIEU_CHI`, `PHAT_HIEN_VA_KHAC_PHUC`, `CAPA`, `LOI_NGUY_CO_CAO`, `PHAN_CONG_THANH_VIEN`, `CAN_CU`.
