@@ -13,7 +13,8 @@ export async function POST(request: Request) {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "Content-Disposition": `attachment; filename="${result.fileName}"`,
-        "x-audit-action": result.auditLog.action
+        "x-audit-action": result.auditLog.action,
+        "x-report-download-url": result.downloadUrl ?? ""
       }
     });
   } catch (error) {
