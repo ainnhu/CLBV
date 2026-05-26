@@ -22,7 +22,8 @@ export type ProtectedAction =
   | "period:unlock"
   | "report:export"
   | "catalog:manage"
-  | "excel:import";
+  | "excel:import"
+  | "session:create";
 
 export type PeriodStatus = "đang mở" | "đã chốt" | "đã khóa";
 export type CapaStatus = "Chưa thực hiện" | "Đang thực hiện" | "Đã hoàn thành" | "Quá hạn" | "Không áp dụng";
