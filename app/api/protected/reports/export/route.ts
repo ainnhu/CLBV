@@ -1,10 +1,10 @@
-import { demoUserFromRequest } from "@/lib/api-auth";
+import { userFromRequest } from "@/lib/api-auth";
 import { assertCanWrite } from "../../../../../services/access-control";
 import { exportFormReport } from "../../../../../services/repositories/reports-repository";
 
 export async function POST(request: Request) {
   try {
-    const user = demoUserFromRequest(request);
+    const user = await userFromRequest(request);
     assertCanWrite(user, "report:export");
     const body = (await request.json().catch(() => ({}))) as { formTemplateId?: string };
     const result = await exportFormReport(user, body.formTemplateId);
