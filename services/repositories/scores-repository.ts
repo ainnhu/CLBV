@@ -1,6 +1,6 @@
 import { formCriteriaItems } from "../../src/lib/mock-data";
 import { assertCanScoreCriteria, type SessionUser } from "../access-control";
-import { createAuditLogEntry } from "../audit-log";
+import { createAuditLogEntry, toAuditLogRow } from "../audit-log";
 import { getSupabaseMode, supabaseRest } from "../supabase-rest";
 
 export type SaveScoreInput = {
@@ -22,19 +22,7 @@ export type SaveScoreInput = {
 export async function saveInspectionScore(user: SessionUser | null, input: SaveScoreInput) {
   const criteria = formCriteriaItems.find((item) => item.id === input.formCriteriaItemId);
   assertCanScoreCriteria(user, input.formCriteriaItemId);
-
-  if (input.score < 0 || input.score > input.maxScore) {
-    throw new Error("Điểm đạt phải từ 0 đến điểm tối đa.");
-  }
-  if (input.score < input.maxScore && !input.deductionReason && !input.finding) {
-    throw new Error("Điểm thấp hơn điểm tối đa phải nhập phát hiện/tồn tại hoặc lý do trừ điểm.");
-  }
-  if (
-    (input.riskLevel === "Cao" || input.riskLevel === "Nghiêm trọng") &&
-    (!input.correctionRequest || !input.dueDate || !input.responsiblePerson)
-  ) {
-    throw new Error("Nguy cơ cao/nghiêm trọng phải có yêu cầu khắc phục, thời hạn và người chịu trách nhiệm.");
-  }
+  validateScoreBusinessRules(input);
 
   const auditLog = createAuditLogEntry({
     userId: user?.id ?? "anonymous",
@@ -47,7 +35,11 @@ export async function saveInspectionScore(user: SessionUser | null, input: SaveS
   });
 
   if (getSupabaseMode() === "supabase") {
-    const [saved] = await supabaseRest.insert<Record<string, unknown>[]>("inspection_scores", {
+    if (!input.inspectionFormId) {
+      throw new Error("Thiếu mã phiếu chấm thực tế để lưu điểm vào Supabase.");
+    }
+
+    const [saved] = await supabaseRest.upsert<Record<string, unknown>[]>("inspection_scores", {
       inspection_form_id: input.inspectionFormId,
       form_criteria_item_id: input.formCriteriaItemId,
       assigned_user_id: user?.id,
@@ -62,8 +54,9 @@ export async function saveInspectionScore(user: SessionUser | null, input: SaveS
       responsible_person: input.responsiblePerson ?? "",
       due_date: input.dueDate || null,
       note: input.note ?? ""
-    });
-    await supabaseRest.insert("audit_logs", auditLog);
+    }, "inspection_form_id,form_criteria_item_id");
+
+    await supabaseRest.insert("audit_logs", toAuditLogRow(auditLog));
     return { mode: "supabase" as const, saved, auditLog };
   }
 
@@ -77,6 +70,21 @@ export async function saveInspectionScore(user: SessionUser | null, input: SaveS
     },
     auditLog
   };
+}
+
+function validateScoreBusinessRules(input: SaveScoreInput) {
+  if (input.score < 0 || input.score > input.maxScore) {
+    throw new Error("Điểm đạt phải từ 0 đến điểm tối đa.");
+  }
+  if (input.score < input.maxScore && !input.deductionReason && !input.finding) {
+    throw new Error("Điểm thấp hơn điểm tối đa phải nhập phát hiện/tồn tại hoặc lý do trừ điểm.");
+  }
+  if (
+    (input.riskLevel === "Cao" || input.riskLevel === "Nghiêm trọng") &&
+    (!input.correctionRequest || !input.dueDate || (!input.responsiblePerson && !input.responsibleDepartment))
+  ) {
+    throw new Error("Nguy cơ cao/nghiêm trọng phải có yêu cầu khắc phục, thời hạn và người/bộ phận chịu trách nhiệm.");
+  }
 }
 
 function mapRiskLevel(value?: string) {
