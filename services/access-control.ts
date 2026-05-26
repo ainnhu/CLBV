@@ -14,10 +14,10 @@ const writeActionsByRole: Record<Role, ProtectedAction[]> = {
   "Thành viên đoàn": ["score:create", "score:update", "score:submit"],
   "Phó trưởng đoàn": ["score:submit"],
   "Trưởng đoàn": ["score:submit"],
-  "Thư ký đoàn": ["score:submit", "report:export", "capa:update"],
+  "Thư ký đoàn": ["score:submit", "report:export", "capa:update", "session:create"],
   "CAPA": ["capa:update"],
-  "Phòng KHTH": ["capa:update", "period:close", "period:unlock", "report:export", "catalog:manage", "excel:import"],
-  Admin: ["score:create", "score:update", "score:submit", "capa:update", "period:close", "period:unlock", "report:export", "catalog:manage", "excel:import"]
+  "Phòng KHTH": ["capa:update", "period:close", "period:unlock", "report:export", "catalog:manage", "excel:import", "session:create"],
+  Admin: ["score:create", "score:update", "score:submit", "capa:update", "period:close", "period:unlock", "report:export", "catalog:manage", "excel:import", "session:create"]
 };
 
 export function canReadPublishedData() {
