@@ -5,6 +5,7 @@ import { assertCanWrite, type SessionUser } from "../access-control";
 import { createAuditLogEntry, toAuditLogRow } from "../audit-log";
 import { buildFormBasedReportWorkbook } from "../../export/report-export";
 import { getSupabaseMode, supabaseRest } from "../supabase-rest";
+import { uploadBufferToSupabaseStorage } from "../supabase-storage";
 import { getFormTemplateWithCriteria } from "./forms-repository";
 
 type DbInspectionScore = {
@@ -57,13 +58,26 @@ export async function exportFormReport(user: SessionUser | null, formTemplateId?
     }
   });
 
+  let downloadUrl = "";
+  let storagePath = `report-exports/${fileName}`;
+
   if (getSupabaseMode() === "supabase") {
+    const bucket = process.env.REPORT_EXPORT_BUCKET || "report-exports";
+    const uploaded = await uploadBufferToSupabaseStorage({
+      bucket,
+      path: fileName,
+      buffer,
+      contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    });
+    downloadUrl = uploaded.downloadUrl;
+    storagePath = uploaded.storagePath;
+
     const [report] = await supabaseRest.insert<Array<{ id: string }>>("report_exports", {
       report_scope: "form_template",
       status: "exported",
       file_name: fileName,
-      storage_path: `report-exports/${fileName}`,
-      download_url: "",
+      storage_path: storagePath,
+      download_url: downloadUrl,
       exported_by: user?.id,
       exported_at: new Date().toISOString(),
       published_at: new Date().toISOString(),
@@ -74,8 +88,8 @@ export async function exportFormReport(user: SessionUser | null, formTemplateId?
       await supabaseRest.insert("report_files", {
         report_export_id: report.id,
         file_name: fileName,
-        storage_path: `report-exports/${fileName}`,
-        download_url: "",
+        storage_path: storagePath,
+        download_url: downloadUrl,
         created_by: user?.id
       });
     }
@@ -83,7 +97,7 @@ export async function exportFormReport(user: SessionUser | null, formTemplateId?
     await supabaseRest.insert("audit_logs", toAuditLogRow(auditLog));
   }
 
-  return { buffer, fileName, auditLog, mode };
+  return { buffer, fileName, auditLog, mode, downloadUrl, storagePath };
 }
 
 async function loadReportData(formTemplateId?: string): Promise<{
