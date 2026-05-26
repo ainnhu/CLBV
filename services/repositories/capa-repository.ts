@@ -1,6 +1,6 @@
 import { inspectionScores } from "../../src/lib/mock-data";
 import { assertCanWrite, type SessionUser } from "../access-control";
-import { createAuditLogEntry } from "../audit-log";
+import { createAuditLogEntry, toAuditLogRow } from "../audit-log";
 import { getSupabaseMode, supabaseRest } from "../supabase-rest";
 
 export type UpdateCapaInput = {
@@ -42,7 +42,7 @@ export async function updateCapa(user: SessionUser | null, input: UpdateCapaInpu
       evidence_url: input.evidenceUrl ?? "",
       updated_by: user?.id
     });
-    await supabaseRest.insert("audit_logs", auditLog);
+    await supabaseRest.insert("audit_logs", toAuditLogRow(auditLog));
     return { mode: "supabase" as const, saved, auditLog };
   }
 
