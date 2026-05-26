@@ -1,6 +1,7 @@
+import { randomUUID } from "crypto";
 import { importAuditWorkbook, type ImportResult, type ImportedCriteriaItem, type ImportedFormTemplate } from "../../import/excel-import";
 import { assertCanWrite, type SessionUser } from "../access-control";
-import { createAuditLogEntry } from "../audit-log";
+import { createAuditLogEntry, toAuditLogRow } from "../audit-log";
 import { getSupabaseMode, supabaseRest } from "../supabase-rest";
 
 export type ImportWorkbookInput = {
@@ -82,7 +83,7 @@ export async function prepareImportWorkbook(user: SessionUser | null, input: Imp
       );
     }
 
-    await supabaseRest.insert("audit_logs", auditLog);
+    await supabaseRest.insert("audit_logs", toAuditLogRow(auditLog));
     return { mode: "supabase" as const, batch: { ...batch, savedBatch }, auditLog };
   }
 
@@ -213,7 +214,7 @@ export async function commitImportBatch(user: SessionUser | null, input: CommitI
         : await supabaseRest.insert<Array<{ id: string }>>("form_criteria_items", criteriaRows);
 
     await supabaseRest.update("import_batches", { id: `eq.${input.batchId}` }, { status: "committed" });
-    await supabaseRest.insert("audit_logs", auditLog);
+    await supabaseRest.insert("audit_logs", toAuditLogRow(auditLog));
 
     return {
       mode: "supabase" as const,
@@ -258,7 +259,7 @@ function buildImportBatch(fileName: string, fileType: string, parsed: ImportResu
   });
 
   return {
-    id: `import-${Date.now()}-${safeSlug(fileName)}`,
+    id: createBatchId(),
     fileName,
     fileType,
     status: warnings.length ? "warning" : "ready_to_review",
@@ -273,13 +274,8 @@ function buildImportBatch(fileName: string, fileType: string, parsed: ImportResu
   };
 }
 
-function safeSlug(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .toLowerCase();
+function createBatchId() {
+  return randomUUID();
 }
 
 function normalizeLookup(value: string) {
