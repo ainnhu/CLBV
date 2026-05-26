@@ -1,45 +1,21 @@
 import { NextResponse } from "next/server";
-import { demoUserFromRequest } from "@/lib/api-auth";
+import { userFromRequest } from "@/lib/api-auth";
+import { validateScorePayload } from "@/lib/validation";
 import { assertCanWrite } from "../../../../services/access-control";
 import { saveInspectionScore } from "../../../../services/repositories/scores-repository";
 
-type ScorePayload = {
-  formCriteriaItemId?: string;
-  score?: number;
-  maxScore?: number;
-  deductionReason?: string;
-  finding?: string;
-  riskLevel?: string;
-  correctionRequest?: string;
-  dueDate?: string;
-  responsiblePerson?: string;
-};
-
 export async function POST(request: Request) {
   try {
-    const user = demoUserFromRequest(request);
+    const user = await userFromRequest(request);
     assertCanWrite(user, "score:update");
-    const payload = (await request.json()) as ScorePayload;
 
-    if (!payload.formCriteriaItemId) {
-      return NextResponse.json({ error: "Thiếu mã tiêu chí cần chấm." }, { status: 400 });
+    const payload = await request.json();
+    const validated = validateScorePayload(payload);
+    if (!validated.ok) {
+      return NextResponse.json({ error: validated.errors.join(" ") }, { status: 422 });
     }
 
-    if (!Number.isFinite(Number(payload.score)) || !Number.isFinite(Number(payload.maxScore))) {
-      return NextResponse.json({ error: "Điểm đạt phải từ 0 đến điểm tối đa." }, { status: 422 });
-    }
-
-    const result = await saveInspectionScore(user, {
-      formCriteriaItemId: payload.formCriteriaItemId,
-      score: Number(payload.score),
-      maxScore: Number(payload.maxScore),
-      deductionReason: payload.deductionReason,
-      finding: payload.finding,
-      riskLevel: payload.riskLevel,
-      correctionRequest: payload.correctionRequest,
-      dueDate: payload.dueDate,
-      responsiblePerson: payload.responsiblePerson
-    });
+    const result = await saveInspectionScore(user, validated.data);
 
     return NextResponse.json({
       status: "accepted",
