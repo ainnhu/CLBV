@@ -1,6 +1,6 @@
 import { auditPeriods } from "../../src/lib/mock-data";
 import { assertCanWrite, type SessionUser } from "../access-control";
-import { createAuditLogEntry } from "../audit-log";
+import { createAuditLogEntry, toAuditLogRow } from "../audit-log";
 import { getSupabaseMode, supabaseRest } from "../supabase-rest";
 
 export type PeriodActionInput = {
@@ -50,7 +50,7 @@ export async function updatePeriodStatus(user: SessionUser | null, input: Period
       { id: `eq.${input.periodId}` },
       { status: dbStatusByAction[input.action] }
     );
-    await supabaseRest.insert("audit_logs", auditLog);
+    await supabaseRest.insert("audit_logs", toAuditLogRow(auditLog));
     return { mode: "supabase" as const, saved, auditLog };
   }
 
