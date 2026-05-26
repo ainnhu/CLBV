@@ -1,10 +1,10 @@
-import { demoUserFromRequest } from "@/lib/api-auth";
+import { userFromRequest } from "@/lib/api-auth";
 import { assertCanWrite } from "../../../../services/access-control";
 import { prepareImportWorkbook } from "../../../../services/repositories/import-repository";
 
 export async function POST(request: Request) {
   try {
-    const user = demoUserFromRequest(request);
+    const user = await userFromRequest(request);
     assertCanWrite(user, "excel:import");
     const formData = await request.formData();
     const file = formData.get("file");
