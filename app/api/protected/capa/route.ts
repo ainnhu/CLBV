@@ -1,34 +1,25 @@
 import { NextResponse } from "next/server";
 import { userFromRequest } from "@/lib/api-auth";
+import { validateCapaUpdatePayload } from "@/lib/validation";
 import { assertCanWrite } from "../../../../services/access-control";
 import { updateCapa } from "../../../../services/repositories/capa-repository";
-
-type CapaPayload = {
-  inspectionScoreId?: string;
-  status?: string;
-  updateContent?: string;
-  evidenceUrl?: string;
-};
 
 export async function POST(request: Request) {
   try {
     const user = await userFromRequest(request);
     assertCanWrite(user, "capa:update");
-    const payload = (await request.json()) as CapaPayload;
-
-    if (!payload.inspectionScoreId) {
-      return NextResponse.json({ error: "Không tìm thấy phát hiện/CAPA cần cập nhật." }, { status: 400 });
-    }
-    if (!payload.status || !payload.updateContent?.trim()) {
-      return NextResponse.json({ error: "Vui lòng nhập trạng thái và nội dung cập nhật khắc phục." }, { status: 422 });
+    const payload = await readJsonBody(request);
+    if (!payload.ok) {
+      return NextResponse.json({ error: payload.error }, { status: 400 });
     }
 
-    const result = await updateCapa(user, {
-      inspectionScoreId: payload.inspectionScoreId,
-      status: payload.status,
-      updateContent: payload.updateContent,
-      evidenceUrl: payload.evidenceUrl
-    });
+    const validated = validateCapaUpdatePayload(payload.data);
+
+    if (!validated.ok) {
+      return NextResponse.json({ error: validated.errors.join(" ") }, { status: 422 });
+    }
+
+    const result = await updateCapa(user, validated.data);
 
     return NextResponse.json({
       status: "accepted",
@@ -40,5 +31,13 @@ export async function POST(request: Request) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Không có quyền cập nhật CAPA.";
     return NextResponse.json({ error: message }, { status: message.includes("403") ? 403 : 500 });
+  }
+}
+
+async function readJsonBody(request: Request): Promise<{ ok: true; data: unknown } | { ok: false; error: string }> {
+  try {
+    return { ok: true, data: await request.json() };
+  } catch {
+    return { ok: false, error: "JSON không hợp lệ. Vui lòng gửi dữ liệu dạng application/json." };
   }
 }
