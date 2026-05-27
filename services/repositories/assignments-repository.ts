@@ -13,6 +13,31 @@ type AssignmentInput = {
   note?: string;
 };
 
+type DbInspectionAssignment = {
+  id: string;
+  block_type: string;
+  note: string | null;
+  inspection_sessions?: {
+    inspection_date?: string | null;
+    status?: string | null;
+    departments?: {
+      name?: string | null;
+    } | null;
+  } | null;
+  inspection_teams?: {
+    name?: string | null;
+  } | null;
+  profiles?: {
+    full_name?: string | null;
+    role?: string | null;
+  } | null;
+  form_criteria_items?: {
+    group_code?: string | null;
+    group_name?: string | null;
+    source_sheet?: string | null;
+  } | null;
+};
+
 function validateAssignment(input: AssignmentInput) {
   if (!input.inspectionSessionId) throw new Error("Thiếu phiên kiểm tra.");
   if (!input.userId) throw new Error("Thiếu người được phân công.");
@@ -72,4 +97,42 @@ export async function createInspectionAssignments(user: SessionUser | null, inpu
     },
     auditLog
   };
+}
+
+export async function listPublicAssignments() {
+  if (getSupabaseMode() === "mock") {
+    return {
+      mode: "mock" as const,
+      assignments: auditAssignments
+    };
+  }
+
+  const rows = await supabaseRest.select<DbInspectionAssignment[]>("inspection_assignments", {
+    select: "id,block_type,note,inspection_sessions(inspection_date,status,departments(name)),inspection_teams(name),profiles(full_name,role),form_criteria_items(group_code,group_name,source_sheet)",
+    order: "created_at.desc"
+  });
+
+  return {
+    mode: "supabase" as const,
+    assignments: rows.map((row) => ({
+      id: row.id,
+      inspectionDate: row.inspection_sessions?.inspection_date ?? "",
+      sessionStatus: row.inspection_sessions?.status ?? "",
+      inspectionTeam: row.inspection_teams?.name ?? "",
+      departmentName: row.inspection_sessions?.departments?.name ?? "",
+      assigneeName: row.profiles?.full_name ?? "",
+      assigneeRole: row.profiles?.role ?? "",
+      blockType: blockLabel(row.block_type),
+      criteriaGroupCode: row.form_criteria_items?.group_code ?? "",
+      criteriaGroupName: row.form_criteria_items?.group_name ?? "",
+      sourceSheet: row.form_criteria_items?.source_sheet ?? "",
+      note: row.note ?? ""
+    }))
+  };
+}
+
+function blockLabel(value?: string | null) {
+  if (value === "administrative") return "Hành chính";
+  if (value === "paraclinical") return "Cận lâm sàng";
+  return "Lâm sàng";
 }
