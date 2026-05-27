@@ -28,6 +28,12 @@ Lưu ý: `service_role key` là khóa bí mật, chỉ đưa vào Vercel Environ
 4. Sao chép toàn bộ nội dung file vào SQL Editor.
 5. Bấm `Run`.
 
+Nếu bạn đã từng chạy schema cũ trước ngày `27/05/2026`, chạy thêm file migration này trong SQL Editor để bổ sung cột/policy còn thiếu mà không cần xóa database:
+
+```text
+database/migrations/20260527_core_fixes.sql
+```
+
 Schema này tạo các bảng chính:
 
 - `profiles`
