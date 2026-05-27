@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { userFromRequest } from "@/lib/api-auth";
+import { readJsonBody } from "@/lib/api-json";
 import { assertCanWrite } from "../../../../services/access-control";
 import { updatePeriodStatus } from "../../../../services/repositories/periods-repository";
 
@@ -13,7 +14,11 @@ export async function POST(request: Request) {
   try {
     const user = await userFromRequest(request);
     assertCanWrite(user, "period:close");
-    const payload = (await request.json()) as PeriodActionPayload;
+    const json = await readJsonBody(request);
+    if (!json.ok) {
+      return json.response;
+    }
+    const payload = json.data as PeriodActionPayload;
 
     if (!payload.periodId) {
       return NextResponse.json({ error: "Không tìm thấy kỳ kiểm tra." }, { status: 400 });
