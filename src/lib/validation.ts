@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export type ValidationResult<T> = {
   ok: true;
   data: T;
@@ -38,48 +40,91 @@ export type ValidatedScoreInput = {
   note?: string;
 };
 
-export function validateScorePayload(input: ScoreValidationInput): ValidationResult<ValidatedScoreInput> {
-  const errors: string[] = [];
-  const score = Number(input.score);
-  const maxScore = Number(input.maxScore);
-  const riskLevel = input.riskLevel?.trim() || "Không";
+export type CapaUpdateValidationInput = {
+  inspectionScoreId?: unknown;
+  status?: unknown;
+  updateContent?: unknown;
+  evidenceUrl?: unknown;
+};
 
-  if (!input.formCriteriaItemId?.trim()) {
-    errors.push("Thiếu mã tiêu chí cần chấm.");
-  }
-  if (!Number.isFinite(score) || !Number.isFinite(maxScore) || maxScore <= 0) {
-    errors.push("Điểm đạt và điểm tối đa phải là số hợp lệ.");
-  }
-  if (Number.isFinite(score) && Number.isFinite(maxScore) && (score < 0 || score > maxScore)) {
-    errors.push("Điểm đạt phải từ 0 đến điểm tối đa.");
-  }
-  if (Number.isFinite(score) && Number.isFinite(maxScore) && score < maxScore && !hasText(input.deductionReason) && !hasText(input.finding)) {
-    errors.push("Điểm thấp hơn điểm tối đa phải nhập phát hiện/tồn tại hoặc lý do trừ điểm.");
-  }
-  if ((riskLevel === "Cao" || riskLevel === "Nghiêm trọng") && (!hasText(input.correctionRequest) || !hasText(input.dueDate) || (!hasText(input.responsiblePerson) && !hasText(input.responsibleDepartment)))) {
-    errors.push("Nguy cơ cao/nghiêm trọng phải có yêu cầu khắc phục, thời hạn và người/bộ phận chịu trách nhiệm.");
-  }
+export type ValidatedCapaUpdateInput = {
+  inspectionScoreId: string;
+  status: "Chưa thực hiện" | "Đang thực hiện" | "Đã hoàn thành" | "Quá hạn" | "Không áp dụng";
+  updateContent: string;
+  evidenceUrl?: string;
+};
 
-  if (errors.length) return { ok: false, errors };
+const optionalText = z.preprocess((value) => {
+  if (value == null) return undefined;
+  const text = String(value).trim();
+  return text || undefined;
+}, z.string().optional());
+
+const requiredText = (label: string) => z.preprocess((value) => {
+  if (value == null) return "";
+  return String(value).trim();
+}, z.string().min(1, `${label} không được để trống.`));
+
+const numberFromInput = (label: string) => z.preprocess((value) => Number(value), z.number({
+  error: `${label} phải là số hợp lệ.`
+}));
+
+const scorePayloadSchema = z.object({
+  inspectionFormId: optionalText,
+  formCriteriaItemId: requiredText("Mã tiêu chí"),
+  score: numberFromInput("Điểm đạt"),
+  maxScore: numberFromInput("Điểm tối đa"),
+  deductionReason: optionalText,
+  finding: optionalText,
+  evidenceText: optionalText,
+  riskLevel: z.preprocess((value) => String(value ?? "Không").trim() || "Không", z.string()),
+  correctionRequest: optionalText,
+  dueDate: optionalText,
+  responsibleDepartment: optionalText,
+  responsiblePerson: optionalText,
+  note: optionalText
+}).superRefine((data, context) => {
+  if (data.maxScore <= 0) {
+    context.addIssue({ code: "custom", path: ["maxScore"], message: "Điểm tối đa phải lớn hơn 0." });
+  }
+  if (data.score < 0 || data.score > data.maxScore) {
+    context.addIssue({ code: "custom", path: ["score"], message: "Điểm đạt phải từ 0 đến điểm tối đa." });
+  }
+  if (data.score < data.maxScore && !data.deductionReason && !data.finding) {
+    context.addIssue({ code: "custom", path: ["deductionReason"], message: "Điểm thấp hơn điểm tối đa phải nhập phát hiện/tồn tại hoặc lý do trừ điểm." });
+  }
+  if ((data.riskLevel === "Cao" || data.riskLevel === "Nghiêm trọng") && (!data.correctionRequest || !data.dueDate || (!data.responsiblePerson && !data.responsibleDepartment))) {
+    context.addIssue({ code: "custom", path: ["riskLevel"], message: "Nguy cơ cao/nghiêm trọng phải có yêu cầu khắc phục, thời hạn và người/bộ phận chịu trách nhiệm." });
+  }
+});
+
+const capaUpdateSchema = z.object({
+  inspectionScoreId: requiredText("Mã phát hiện/CAPA"),
+  status: z.enum(["Chưa thực hiện", "Đang thực hiện", "Đã hoàn thành", "Quá hạn", "Không áp dụng"], {
+    error: "Trạng thái CAPA không hợp lệ."
+  }),
+  updateContent: requiredText("Nội dung cập nhật khắc phục"),
+  evidenceUrl: optionalText
+});
+
+export function validateScorePayload(input: unknown): ValidationResult<ValidatedScoreInput> {
+  const parsed = scorePayloadSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, errors: parsed.error.issues.map((issue) => issue.message) };
+  }
 
   return {
     ok: true,
-    data: {
-      formCriteriaItemId: input.formCriteriaItemId!.trim(),
-      inspectionFormId: clean(input.inspectionFormId),
-      score,
-      maxScore,
-      deductionReason: clean(input.deductionReason),
-      finding: clean(input.finding),
-      evidenceText: clean(input.evidenceText),
-      riskLevel,
-      correctionRequest: clean(input.correctionRequest),
-      dueDate: clean(input.dueDate),
-      responsibleDepartment: clean(input.responsibleDepartment),
-      responsiblePerson: clean(input.responsiblePerson),
-      note: clean(input.note)
-    }
+    data: parsed.data
   };
+}
+
+export function validateCapaUpdatePayload(input: unknown): ValidationResult<ValidatedCapaUpdateInput> {
+  const parsed = capaUpdateSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, errors: parsed.error.issues.map((issue) => issue.message) };
+  }
+  return { ok: true, data: parsed.data };
 }
 
 export function validateRequiredText(value: unknown, label: string): string | null {
@@ -88,9 +133,4 @@ export function validateRequiredText(value: unknown, label: string): string | nu
 
 function hasText(value: unknown) {
   return typeof value === "string" ? value.trim().length > 0 : value != null && String(value).trim().length > 0;
-}
-
-function clean(value?: string) {
-  const text = value?.trim();
-  return text || undefined;
 }
