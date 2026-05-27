@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import { userFromRequest } from "@/lib/api-auth";
+import { readJsonBody } from "@/lib/api-json";
 import { createInspectionSession } from "../../../../services/repositories/sessions-repository";
 
 export async function POST(request: Request) {
   try {
     const user = await userFromRequest(request);
-    const payload = await request.json();
-    const result = await createInspectionSession(user, payload);
+    const payload = await readJsonBody(request);
+    if (!payload.ok) {
+      return payload.response;
+    }
+    const result = await createInspectionSession(user, payload.data as Parameters<typeof createInspectionSession>[1]);
 
     return NextResponse.json({
       status: "accepted",
