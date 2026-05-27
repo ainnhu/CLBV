@@ -1,6 +1,31 @@
 import * as XLSX from "xlsx";
 import type { FormCriteriaItem, FormTemplate, InspectionScore } from "../src/lib/types";
 
+const detailHeaders = [
+  "STT",
+  "Mã nhóm",
+  "Nhóm nội dung",
+  "Nội dung kiểm tra",
+  "Minh chứng cần xem",
+  "Điểm tối đa",
+  "Điểm đạt",
+  "Tỷ lệ đạt",
+  "Thành viên phụ trách Đoàn 01",
+  "Thành viên phụ trách Đoàn 02",
+  "Phát hiện/tồn tại",
+  "Minh chứng thực tế",
+  "Yêu cầu khắc phục",
+  "Thời hạn",
+  "Bộ phận chịu trách nhiệm",
+  "Người chịu trách nhiệm",
+  "Trạng thái CAPA",
+  "Mức độ nguy cơ",
+  "Ghi chú",
+  "source_file",
+  "source_sheet",
+  "source_row"
+];
+
 export function buildFormBasedReportWorkbook({
   formTemplate,
   criteriaItems,
@@ -13,6 +38,13 @@ export function buildFormBasedReportWorkbook({
   const workbook = XLSX.utils.book_new();
   const detailRows = buildDetailRows(criteriaItems, scores);
   const summary = buildSummary(formTemplate, detailRows);
+  workbook.Props = {
+    Title: `Báo cáo chấm điểm ${formTemplate.departmentName}`,
+    Subject: "Chấm điểm kiểm tra hoạt động bệnh viện",
+    Author: "Bệnh viện Sản - Nhi Cà Mau - Phòng Kế hoạch - Tổng hợp",
+    Company: "Bệnh viện Sản - Nhi Cà Mau",
+    CreatedDate: new Date()
+  };
 
   appendSheet(workbook, "DASHBOARD_THONG_KE", [
     ["BỆNH VIỆN SẢN - NHI CÀ MAU"],
@@ -47,8 +79,13 @@ export function buildFormBasedReportWorkbook({
     "Sheet nguồn": formTemplate.sourceSheet
   }]);
 
-  appendJsonSheet(workbook, "PHIEU_CHI_TIET", detailRows);
+  appendFormSheet(workbook, "PHIEU_CHI_TIET", formTemplate, summary, detailRows);
   appendJsonSheet(workbook, "CHI_TIET_TIEU_CHI", detailRows);
+  appendJsonSheet(workbook, "CHI_TIET_LOI", detailRows.filter((row) => {
+    const achieved = Number(row["Điểm đạt"]);
+    const max = Number(row["Điểm tối đa"]);
+    return Number.isFinite(achieved) && Number.isFinite(max) && achieved < max;
+  }));
   appendJsonSheet(workbook, "PHAT_HIEN_VA_KHAC_PHUC", detailRows.filter((row) => row["Phát hiện/tồn tại"] || row["Yêu cầu khắc phục"]));
   appendJsonSheet(workbook, "CAPA", detailRows.filter((row) => row["Yêu cầu khắc phục"] || row["Trạng thái CAPA"]));
   appendJsonSheet(workbook, "LOI_NGUY_CO_CAO", detailRows.filter((row) => ["Cao", "Nghiêm trọng"].includes(String(row["Mức độ nguy cơ"]))));
@@ -137,6 +174,86 @@ function classifyScore(totalScore: number, hasSeriousRisk: boolean) {
 function appendJsonSheet(workbook: XLSX.WorkBook, name: string, rows: Record<string, unknown>[]) {
   const sheet = rows.length ? XLSX.utils.json_to_sheet(rows) : XLSX.utils.aoa_to_sheet([["Không có dữ liệu"]]);
   sheet["!cols"] = estimateColumns(rows);
+  if (rows.length) {
+    sheet["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length, c: Object.keys(rows[0]).length - 1 } }) };
+  }
+  XLSX.utils.book_append_sheet(workbook, sheet, name);
+}
+
+function appendFormSheet(
+  workbook: XLSX.WorkBook,
+  name: string,
+  formTemplate: FormTemplate,
+  summary: ReturnType<typeof buildSummary>,
+  rows: ReturnType<typeof buildDetailRows>
+) {
+  const headerValues = new Map(formTemplate.headerFields.map((field) => [field.label, field.value]));
+  const sheetRows: unknown[][] = [
+    ["BỆNH VIỆN SẢN - NHI CÀ MAU"],
+    ["PHIẾU KIỂM TRA VÀ CHẤM ĐIỂM HOẠT ĐỘNG BỆNH VIỆN"],
+    [formTemplate.name],
+    [],
+    ["Đơn vị được kiểm tra", formTemplate.departmentName, "", "Khối", formTemplate.block, "", "Đoàn kiểm tra", formTemplate.inspectionTeam],
+    ["Ngày kiểm tra", headerValues.get("Ngày kiểm tra") ?? "", "", "Trưởng đoàn", headerValues.get("Trưởng đoàn") ?? "", "", "Người tiếp đoàn", headerValues.get("Người tiếp đoàn") ?? ""],
+    ["Thời gian bắt đầu", headerValues.get("Thời gian bắt đầu") ?? "", "", "Thời gian kết thúc", headerValues.get("Thời gian kết thúc") ?? "", "", "Phiên bản", formTemplate.version],
+    ["Tổng điểm", summary.totalScore, "", "Tỷ lệ", `${summary.ratio}%`, "", "Xếp loại", summary.classification],
+    ["Số nội dung", formTemplate.criteriaCount, "", "Số nội dung đã chấm", summary.scoredCount, "", "Nguy cơ cao/nghiêm trọng", summary.highRiskCount],
+    ["File nguồn", formTemplate.sourceFile, "", "Sheet nguồn", formTemplate.sourceSheet, "", "Thang điểm", formTemplate.totalScore],
+    ["Kết luận sơ bộ", headerValues.get("Kết luận sơ bộ") ?? summary.classification],
+    [],
+    detailHeaders,
+    ...rows.map((row) => detailHeaders.map((header) => (row as Record<string, unknown>)[header]))
+  ];
+
+  const sheet = XLSX.utils.aoa_to_sheet(sheetRows);
+  sheet["!merges"] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: detailHeaders.length - 1 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: detailHeaders.length - 1 } },
+    { s: { r: 2, c: 0 }, e: { r: 2, c: detailHeaders.length - 1 } },
+    { s: { r: 10, c: 1 }, e: { r: 10, c: detailHeaders.length - 1 } }
+  ];
+  sheet["!cols"] = [
+    { wch: 6 },
+    { wch: 12 },
+    { wch: 24 },
+    { wch: 58 },
+    { wch: 42 },
+    { wch: 10 },
+    { wch: 10 },
+    { wch: 10 },
+    { wch: 28 },
+    { wch: 28 },
+    { wch: 36 },
+    { wch: 32 },
+    { wch: 36 },
+    { wch: 14 },
+    { wch: 26 },
+    { wch: 24 },
+    { wch: 18 },
+    { wch: 16 },
+    { wch: 24 },
+    { wch: 36 },
+    { wch: 22 },
+    { wch: 10 }
+  ];
+  sheet["!rows"] = [
+    { hpt: 22 },
+    { hpt: 24 },
+    { hpt: 22 },
+    {},
+    { hpt: 22 },
+    { hpt: 22 },
+    { hpt: 22 },
+    { hpt: 22 },
+    { hpt: 22 },
+    { hpt: 22 },
+    { hpt: 30 },
+    {},
+    { hpt: 28 }
+  ];
+  sheet["!autofilter"] = {
+    ref: XLSX.utils.encode_range({ s: { r: 12, c: 0 }, e: { r: sheetRows.length - 1, c: detailHeaders.length - 1 } })
+  };
   XLSX.utils.book_append_sheet(workbook, sheet, name);
 }
 
