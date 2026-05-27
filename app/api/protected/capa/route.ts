@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { userFromRequest } from "@/lib/api-auth";
+import { readJsonBody } from "@/lib/api-json";
 import { validateCapaUpdatePayload } from "@/lib/validation";
 import { assertCanWrite } from "../../../../services/access-control";
 import { updateCapa } from "../../../../services/repositories/capa-repository";
@@ -10,7 +11,7 @@ export async function POST(request: Request) {
     assertCanWrite(user, "capa:update");
     const payload = await readJsonBody(request);
     if (!payload.ok) {
-      return NextResponse.json({ error: payload.error }, { status: 400 });
+      return payload.response;
     }
 
     const validated = validateCapaUpdatePayload(payload.data);
@@ -31,13 +32,5 @@ export async function POST(request: Request) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Không có quyền cập nhật CAPA.";
     return NextResponse.json({ error: message }, { status: message.includes("403") ? 403 : 500 });
-  }
-}
-
-async function readJsonBody(request: Request): Promise<{ ok: true; data: unknown } | { ok: false; error: string }> {
-  try {
-    return { ok: true, data: await request.json() };
-  } catch {
-    return { ok: false, error: "JSON không hợp lệ. Vui lòng gửi dữ liệu dạng application/json." };
   }
 }
