@@ -1,5 +1,5 @@
--- Supabase schema for hospital activity audit scoring MVP.
--- Principle: public/anonymous users can read public data; all writes require auth and role checks.
+-- Schema MVP cho hệ thống chấm điểm kiểm tra hoạt động bệnh viện.
+-- Nguyên tắc: ai có link web xem được dữ liệu đã công khai; mọi thao tác ghi phải đăng nhập và đúng quyền.
 
 create extension if not exists "pgcrypto";
 
@@ -188,6 +188,7 @@ create table inspection_assignments (
   department_id uuid references departments(id),
   block_type block_type not null,
   note text,
+  created_at timestamptz not null default now(),
   unique (inspection_session_id, user_id, form_criteria_item_id)
 );
 
@@ -400,6 +401,7 @@ create policy public_read_sessions on inspection_sessions for select using (true
 create policy public_read_forms on inspection_forms for select using (true);
 create policy public_read_assignments on inspection_assignments for select using (true);
 create policy public_read_scores on inspection_scores for select using (true);
+create policy public_read_score_attachments on score_attachments for select using (true);
 create policy public_read_capa on capa_updates for select using (true);
 create policy public_read_reports on report_exports for select using (status in ('published', 'exported'));
 create policy public_read_report_files on report_files for select using (
@@ -476,6 +478,7 @@ create policy read_audit_logs_admin_khth on audit_logs
 create index idx_form_templates_public_lookup on form_templates (form_type, block_type, department_name, inspection_team_name, is_active);
 create index idx_form_criteria_template_order on form_criteria_items (form_template_id, order_index);
 create index idx_inspection_sessions_public_lookup on inspection_sessions (inspection_date, department_id, inspection_team_id, status);
+create index idx_inspection_assignments_public_lookup on inspection_assignments (inspection_session_id, user_id, created_at desc);
 create index idx_inspection_scores_form_criteria on inspection_scores (inspection_form_id, form_criteria_item_id);
 create index idx_inspection_scores_risk_capa on inspection_scores (risk_level, capa_status, due_date);
 create index idx_report_exports_public on report_exports (status, audit_period_id, exported_at desc);
