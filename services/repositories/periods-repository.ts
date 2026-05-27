@@ -25,7 +25,7 @@ export async function updatePeriodStatus(user: SessionUser | null, input: Period
   assertCanWrite(user, input.action === "unlock" ? "period:unlock" : "period:close");
 
   const period = auditPeriods.find((item) => item.id === input.periodId);
-  if (!period) {
+  if (getSupabaseMode() === "mock" && !period) {
     throw new Error("Không tìm thấy kỳ kiểm tra.");
   }
   if (input.action === "unlock" && !input.reason?.trim()) {
@@ -40,7 +40,7 @@ export async function updatePeriodStatus(user: SessionUser | null, input: Period
     module: "Kỳ kiểm tra",
     entityType: "audit_periods",
     entityId: input.periodId,
-    oldValue: { status: period.status },
+    oldValue: { status: period?.status ?? "unknown" },
     newValue: { status: nextStatus, reason: input.reason ?? "" }
   });
 
@@ -50,6 +50,9 @@ export async function updatePeriodStatus(user: SessionUser | null, input: Period
       { id: `eq.${input.periodId}` },
       { status: dbStatusByAction[input.action] }
     );
+    if (!saved) {
+      throw new Error("Không tìm thấy kỳ kiểm tra trong Supabase.");
+    }
     await supabaseRest.insert("audit_logs", toAuditLogRow(auditLog));
     return { mode: "supabase" as const, saved, auditLog };
   }
@@ -57,10 +60,10 @@ export async function updatePeriodStatus(user: SessionUser | null, input: Period
   return {
     mode: "mock" as const,
     saved: {
-      id: period.id,
-      month: period.month,
-      year: period.year,
-      previousStatus: period.status,
+      id: period!.id,
+      month: period!.month,
+      year: period!.year,
+      previousStatus: period!.status,
       nextStatus
     },
     auditLog
