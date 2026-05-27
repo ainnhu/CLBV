@@ -84,6 +84,72 @@ export async function uploadScoreAttachment({
   };
 }
 
+export async function uploadCapaEvidence({
+  user,
+  inspectionScoreId,
+  file
+}: {
+  user: SessionUser | null;
+  inspectionScoreId: string;
+  file: File;
+}) {
+  assertCanWrite(user, "capa:update");
+  validateAttachmentInput(inspectionScoreId, file);
+
+  const auditLog = createAuditLogEntry({
+    userId: user?.id ?? "anonymous",
+    role: user?.role,
+    action: "capa:evidence_upload",
+    module: "CAPA",
+    entityType: "capa_updates",
+    entityId: inspectionScoreId,
+    newValue: {
+      fileName: file.name,
+      fileType: file.type,
+      fileSize: file.size
+    }
+  });
+
+  if (getSupabaseMode() === "mock") {
+    return {
+      mode: "mock" as const,
+      evidence: {
+        inspectionScoreId,
+        fileName: file.name,
+        fileType: file.type,
+        evidenceUrl: "mock://capa-evidence-preview",
+        note: "Chưa cấu hình Supabase Storage nên chỉ kiểm tra quyền và validate file."
+      },
+      auditLog
+    };
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const safeName = sanitizeFileName(file.name);
+  const bucket = process.env.CAPA_EVIDENCE_BUCKET || "capa-evidence";
+  const path = `${inspectionScoreId}/${Date.now()}-${safeName}`;
+  const uploaded = await uploadBufferToSupabaseStorage({
+    bucket,
+    path,
+    buffer,
+    contentType: file.type || "application/octet-stream"
+  });
+
+  await supabaseRest.insert("audit_logs", toAuditLogRow(auditLog));
+
+  return {
+    mode: "supabase" as const,
+    evidence: {
+      inspectionScoreId,
+      fileName: file.name,
+      fileType: file.type,
+      storagePath: uploaded.storagePath,
+      evidenceUrl: uploaded.downloadUrl
+    },
+    auditLog
+  };
+}
+
 function validateAttachmentInput(inspectionScoreId: string, file: File) {
   if (!inspectionScoreId) {
     throw new Error("Thiếu mã điểm chấm để gắn minh chứng.");
