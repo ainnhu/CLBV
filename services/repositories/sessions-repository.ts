@@ -1,4 +1,4 @@
-import { auditPeriods, formTemplates } from "../../src/lib/mock-data";
+import { auditPeriods, auditSchedule, formTemplates } from "../../src/lib/mock-data";
 import { assertCanWrite, type SessionUser } from "../access-control";
 import { createAuditLogEntry, toAuditLogRow } from "../audit-log";
 import { getSupabaseMode, supabaseRest } from "../supabase-rest";
@@ -24,6 +24,28 @@ type DbFormTemplate = {
   department_name: string;
   inspection_team_id?: string | null;
   inspection_team_name: string;
+};
+
+type DbInspectionSession = {
+  id: string;
+  inspection_date: string;
+  block_type: string;
+  form_type: string;
+  status: string;
+  created_at: string;
+  departments?: {
+    name?: string | null;
+    block_type?: string | null;
+  } | null;
+  inspection_teams?: {
+    name?: string | null;
+  } | null;
+  audit_periods?: {
+    month?: number | null;
+    quarter?: number | null;
+    year?: number | null;
+    status?: string | null;
+  } | null;
 };
 
 function validateInput(input: CreateInspectionSessionInput) {
@@ -113,4 +135,80 @@ export async function createInspectionSession(user: SessionUser | null, input: C
     },
     auditLog
   };
+}
+
+export async function listPublicInspectionSessions() {
+  if (getSupabaseMode() === "mock") {
+    return {
+      mode: "mock" as const,
+      weeklySchedule: auditSchedule,
+      sessions: auditSchedule.flatMap((row) => [
+        ...row.team1ClinicalDepartments.map((departmentName) => ({
+          id: `${row.id}-team1-${departmentName}`,
+          inspectionDate: row.auditDate,
+          inspectionTeam: "Đoàn 01",
+          departmentName,
+          blockType: "Lâm sàng",
+          status: "dự kiến",
+          note: row.note
+        })),
+        {
+          id: `${row.id}-team1-support`,
+          inspectionDate: row.auditDate,
+          inspectionTeam: "Đoàn 01",
+          departmentName: row.team1SupportDepartment,
+          blockType: "Hành chính/Cận lâm sàng",
+          status: "dự kiến",
+          note: row.note
+        },
+        ...row.team2ClinicalDepartments.map((departmentName) => ({
+          id: `${row.id}-team2-${departmentName}`,
+          inspectionDate: row.auditDate,
+          inspectionTeam: "Đoàn 02",
+          departmentName,
+          blockType: "Lâm sàng",
+          status: "dự kiến",
+          note: row.note
+        })),
+        {
+          id: `${row.id}-team2-support`,
+          inspectionDate: row.auditDate,
+          inspectionTeam: "Đoàn 02",
+          departmentName: row.team2SupportDepartment,
+          blockType: "Hành chính/Cận lâm sàng",
+          status: "dự kiến",
+          note: row.note
+        }
+      ])
+    };
+  }
+
+  const rows = await supabaseRest.select<DbInspectionSession[]>("inspection_sessions", {
+    select: "id,inspection_date,block_type,form_type,status,created_at,departments(name,block_type),inspection_teams(name),audit_periods(month,quarter,year,status)",
+    order: "inspection_date.asc"
+  });
+
+  return {
+    mode: "supabase" as const,
+    sessions: rows.map((row) => ({
+      id: row.id,
+      inspectionDate: row.inspection_date,
+      inspectionTeam: row.inspection_teams?.name ?? "",
+      departmentName: row.departments?.name ?? "",
+      blockType: blockLabel(row.block_type),
+      formType: row.form_type,
+      status: row.status,
+      month: row.audit_periods?.month ?? null,
+      quarter: row.audit_periods?.quarter ?? null,
+      year: row.audit_periods?.year ?? null,
+      periodStatus: row.audit_periods?.status ?? "",
+      createdAt: row.created_at
+    }))
+  };
+}
+
+function blockLabel(value?: string | null) {
+  if (value === "administrative") return "Hành chính";
+  if (value === "paraclinical") return "Cận lâm sàng";
+  return "Lâm sàng";
 }
