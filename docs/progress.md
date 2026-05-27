@@ -10,7 +10,7 @@ Hiện tại ưu tiên đã chuyển sang hoàn thành phần lõi trước khi 
 | --- | ---: | --- |
 | Nguồn dữ liệu | 85% | Đã phân tích PDF và 04 file Excel; đã tạo dữ liệu theo sheet phiếu nguồn, giữ `source_file`, `source_sheet`, `source_row`, loại phiếu, khoa/phòng, đoàn và phiên bản. |
 | Database và bảo mật | 80% | Đã bổ sung schema Supabase theo hướng public-read/protected-write, thêm `report_files`, `public_profiles`, index, grant cho `anon/authenticated`, RLS cho hồ sơ cá nhân, phân công, report file và thao tác quản trị. |
-| Auth/API quyền | 88% | API protected đã hỗ trợ demo header và có thể đọc Supabase Bearer token khi cấu hình thật; request ghi vẫn kiểm tra quyền backend trước khi xử lý body/file. |
+| Auth/API quyền | 90% | API protected đã hỗ trợ demo header và có thể đọc Supabase Bearer token khi cấu hình thật; request ghi kiểm tra quyền backend trước khi xử lý body/file, dùng Zod schema cho dữ liệu chấm điểm và CAPA update, JSON hỏng trả `400`, dữ liệu sai nghiệp vụ trả `422`. |
 | API nghiệp vụ | 99% | Đã có API public/protected cho dashboard, form, danh mục public, kết quả public, lịch sử public, lỗi nguy cơ cao public, báo cáo public, CAPA public, lịch/phiên kiểm tra public, phân công public, chấm điểm, upload minh chứng điểm chấm, upload minh chứng CAPA, CAPA update, chốt/mở khóa kỳ, tạo phiên kiểm tra, tạo phân công, import prepare/commit và export Excel qua backend; audit log đã được map đúng cột database. |
 | Import Excel | 82% | Parser ưu tiên sheet phiếu kiểm tra/chấm điểm theo khoa/phòng, tạo import batch UUID, cảnh báo lệch số tiêu chí/tổng điểm, có màn hình đọc thử/rà soát cảnh báo trước khi commit `upsert_version`. |
 | Excel báo cáo | 78% | Export đã có các sheet `DASHBOARD_THONG_KE`, `TONG_HOP_DIEM`, `PHIEU_CHI_TIET`, `CHI_TIET_TIEU_CHI`, `CHI_TIET_LOI`, `PHAT_HIEN_VA_KHAC_PHUC`, `CAPA`, `LOI_NGUY_CO_CAO`, `PHAN_CONG_THANH_VIEN`, `CAN_CU`; `PHIEU_CHI_TIET` đã có bố cục đầu phiếu, thông tin nguồn, tổng điểm, xếp loại, bảng tiêu chí, độ rộng cột và bộ lọc. Khi có Supabase thật sẽ upload file vào Storage và ghi `report_exports/report_files`. |
@@ -41,6 +41,9 @@ Hiện tại ưu tiên đã chuyển sang hoàn thành phần lõi trước khi 
 - Local API protected upload minh chứng với vai trò `Admin`: trả về `200` ở chế độ mock.
 - Local API protected upload minh chứng CAPA không đăng nhập: trả về `403`.
 - Local API protected upload minh chứng CAPA với vai trò `CAPA`: trả về `200` ở chế độ mock.
+- Local API protected CAPA update hợp lệ với vai trò `CAPA`: trả về `200`.
+- Local API protected score thiếu lý do trừ điểm: trả về `422`.
+- Local API protected JSON không hợp lệ: trả về `400`.
 - Build đã kiểm tra TypeScript sau khi bổ sung schema, auth request, validation điểm, audit log row mapping và export Excel nhiều sheet.
 
 ## Việc tiếp theo
