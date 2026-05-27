@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import { formCriteriaItems, formTemplates, inspectionScores, sampleFormTemplate } from "../../src/lib/mock-data";
+import { formCriteriaItems, formTemplates, inspectionScores, reports, sampleFormTemplate } from "../../src/lib/mock-data";
 import type { FormCriteriaItem, FormTemplate, InspectionScore } from "../../src/lib/types";
 import { assertCanWrite, type SessionUser } from "../access-control";
 import { createAuditLogEntry, toAuditLogRow } from "../audit-log";
@@ -28,6 +28,53 @@ type DbInspectionScore = {
   note: string | null;
   updated_at: string;
 };
+
+type DbReportExport = {
+  id: string;
+  report_scope: string;
+  status: string;
+  file_name: string | null;
+  storage_path: string | null;
+  download_url: string | null;
+  exported_at: string | null;
+  published_at: string | null;
+  summary_json: Record<string, unknown> | null;
+};
+
+export async function listPublicReportExports() {
+  if (getSupabaseMode() === "mock") {
+    return reports.map((report) => ({
+      id: report.id,
+      periodId: report.periodId,
+      month: report.month,
+      year: report.year,
+      status: report.status,
+      checkedDepartments: report.checkedDepartments,
+      highRiskCount: report.highRiskCount,
+      downloadUrl: report.downloadURL ?? "",
+      dataSource: "mock"
+    }));
+  }
+
+  const rows = await supabaseRest.select<DbReportExport[]>("report_exports", {
+    select: "id,report_scope,status,file_name,storage_path,download_url,exported_at,published_at,summary_json",
+    status: "in.(published,exported)",
+    order: "exported_at.desc"
+  });
+
+  return rows.map((row) => ({
+    id: row.id,
+    scope: row.report_scope,
+    status: row.status,
+    fileName: row.file_name ?? "",
+    storagePath: row.storage_path ?? "",
+    downloadUrl: row.download_url ?? "",
+    exportedAt: row.exported_at ?? "",
+    publishedAt: row.published_at ?? "",
+    summary: row.summary_json ?? {},
+    dataSource: "supabase"
+  }));
+}
 
 export async function exportFormReport(user: SessionUser | null, formTemplateId?: string) {
   assertCanWrite(user, "report:export");
