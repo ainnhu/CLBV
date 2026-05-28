@@ -120,6 +120,52 @@ export type ValidatedAssignmentInput = {
   note?: string;
 };
 
+export type ValidatedCommitImportInput = {
+  batchId: string;
+  fileName: string;
+  fileType: string;
+  templates: Array<{
+    sourceFile: string;
+    sourceSheet: string;
+    formType: "LS_CLS" | "HANH_CHINH";
+    departmentCode: string;
+    departmentName: string;
+    inspectionTeam: "Đoàn 01" | "Đoàn 02";
+    totalScore: number;
+    criteriaCount: number;
+    headerFields: Array<{
+      key: string;
+      label: string;
+      value: string;
+      sourceCell: string;
+      orderIndex: number;
+    }>;
+  }>;
+  criteriaItems: Array<{
+    sourceFile: string;
+    sourceSheet: string;
+    sourceRow: number;
+    order: number;
+    groupCode: string;
+    groupName: string;
+    content: string;
+    evidenceRequired: string;
+    maxScore: number;
+    team1Assignee: string;
+    team2Assignee: string;
+  }>;
+  warnings?: Array<{
+    type: string;
+    sourceFile: string;
+    sourceSheet?: string;
+    sourceRow?: number;
+    message: string;
+  }>;
+  allowWarnings?: boolean;
+  importMode?: "upsert_version" | "append_new_version";
+  version?: string;
+};
+
 const optionalText = z.preprocess((value) => {
   if (value == null) return undefined;
   const text = String(value).trim();
@@ -247,6 +293,67 @@ const assignmentSchema = z.object({
   note: optionalText
 });
 
+const positiveNumberFromInput = (label: string) => numberFromInput(label).pipe(z.number().positive(`${label} phải lớn hơn 0.`));
+const nonNegativeNumberFromInput = (label: string) => numberFromInput(label).pipe(z.number().nonnegative(`${label} không được âm.`));
+
+const importHeaderFieldSchema = z.object({
+  key: requiredText("Mã trường đầu phiếu"),
+  label: requiredText("Tên trường đầu phiếu"),
+  value: z.preprocess((value) => String(value ?? "").trim(), z.string()),
+  sourceCell: z.preprocess((value) => String(value ?? "").trim(), z.string()),
+  orderIndex: nonNegativeNumberFromInput("Thứ tự trường đầu phiếu")
+}).passthrough();
+
+const importTemplateSchema = z.object({
+  sourceFile: requiredText("Tên file nguồn"),
+  sourceSheet: requiredText("Sheet nguồn"),
+  formType: z.enum(["LS_CLS", "HANH_CHINH"], {
+    error: "Loại phiếu import không hợp lệ."
+  }),
+  departmentCode: requiredText("Mã khoa/phòng"),
+  departmentName: requiredText("Tên khoa/phòng"),
+  inspectionTeam: z.enum(["Đoàn 01", "Đoàn 02"], {
+    error: "Đoàn kiểm tra import không hợp lệ."
+  }),
+  totalScore: positiveNumberFromInput("Tổng điểm phiếu"),
+  criteriaCount: positiveNumberFromInput("Số tiêu chí"),
+  headerFields: z.preprocess((value) => Array.isArray(value) ? value : [], z.array(importHeaderFieldSchema))
+}).passthrough();
+
+const importCriteriaItemSchema = z.object({
+  sourceFile: requiredText("Tên file nguồn của tiêu chí"),
+  sourceSheet: requiredText("Sheet nguồn của tiêu chí"),
+  sourceRow: positiveNumberFromInput("Dòng nguồn của tiêu chí"),
+  order: positiveNumberFromInput("STT tiêu chí"),
+  groupCode: optionalText.transform((value) => value ?? ""),
+  groupName: optionalText.transform((value) => value ?? ""),
+  content: requiredText("Nội dung tiêu chí"),
+  evidenceRequired: optionalText.transform((value) => value ?? ""),
+  maxScore: positiveNumberFromInput("Điểm tối đa tiêu chí"),
+  team1Assignee: optionalText.transform((value) => value ?? ""),
+  team2Assignee: optionalText.transform((value) => value ?? "")
+}).passthrough();
+
+const importWarningSchema = z.object({
+  type: optionalText.transform((value) => value ?? "validation"),
+  sourceFile: requiredText("File nguồn của cảnh báo"),
+  sourceSheet: optionalText,
+  sourceRow: z.preprocess((value) => value == null || value === "" ? undefined : Number(value), z.number().positive().optional()),
+  message: requiredText("Nội dung cảnh báo")
+}).passthrough();
+
+const commitImportSchema = z.object({
+  batchId: requiredText("Mã import batch"),
+  fileName: requiredText("Tên file import"),
+  fileType: requiredText("Loại file import"),
+  templates: z.preprocess((value) => Array.isArray(value) ? value : [], z.array(importTemplateSchema).min(1, "Import batch phải có ít nhất 01 phiếu.")),
+  criteriaItems: z.preprocess((value) => Array.isArray(value) ? value : [], z.array(importCriteriaItemSchema).min(1, "Import batch phải có ít nhất 01 tiêu chí.")),
+  warnings: z.preprocess((value) => Array.isArray(value) ? value : [], z.array(importWarningSchema)).optional(),
+  allowWarnings: z.boolean().optional(),
+  importMode: z.enum(["upsert_version", "append_new_version"]).optional(),
+  version: optionalText
+});
+
 export function validateScorePayload(input: unknown): ValidationResult<ValidatedScoreInput> {
   const parsed = scorePayloadSchema.safeParse(input);
   if (!parsed.success) {
@@ -286,6 +393,14 @@ export function validateInspectionSessionPayload(input: unknown): ValidationResu
 
 export function validateAssignmentPayload(input: unknown): ValidationResult<ValidatedAssignmentInput> {
   const parsed = assignmentSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, errors: parsed.error.issues.map((issue) => issue.message) };
+  }
+  return { ok: true, data: parsed.data };
+}
+
+export function validateCommitImportPayload(input: unknown): ValidationResult<ValidatedCommitImportInput> {
+  const parsed = commitImportSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, errors: parsed.error.issues.map((issue) => issue.message) };
   }
