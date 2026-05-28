@@ -1,6 +1,6 @@
 # Tiến độ hoàn thành web
 
-Ngày cập nhật: 26/05/2026.
+Ngày cập nhật: 28/05/2026.
 
 ## Tổng quan
 
@@ -9,7 +9,7 @@ Hiện tại ưu tiên đã chuyển sang hoàn thành phần lõi trước khi 
 | Nhóm việc | Tiến độ | Trạng thái |
 | --- | ---: | --- |
 | Nguồn dữ liệu | 85% | Đã phân tích PDF và 04 file Excel; đã tạo dữ liệu theo sheet phiếu nguồn, giữ `source_file`, `source_sheet`, `source_row`, loại phiếu, khoa/phòng, đoàn và phiên bản. |
-| Database và bảo mật | 80% | Đã bổ sung schema Supabase theo hướng public-read/protected-write, thêm `report_files`, `public_profiles`, index, grant cho `anon/authenticated`, RLS cho hồ sơ cá nhân, phân công, report file và thao tác quản trị. |
+| Database và bảo mật | 82% | Đã bổ sung schema Supabase theo hướng public-read/protected-write, thêm `report_files`, `public_profiles`, `inspection_assignments.created_at`, policy đọc công khai metadata minh chứng điểm chấm, index, grant cho `anon/authenticated`, RLS cho hồ sơ cá nhân, phân công, report file và thao tác quản trị. Có migration `database/migrations/20260527_core_fixes.sql` cho database đã chạy schema cũ. |
 | Auth/API quyền | 90% | API protected đã hỗ trợ demo header và có thể đọc Supabase Bearer token khi cấu hình thật; request ghi kiểm tra quyền backend trước khi xử lý body/file, dùng Zod schema cho dữ liệu chấm điểm và CAPA update, JSON hỏng trả `400`, dữ liệu sai nghiệp vụ trả `422`. |
 | API nghiệp vụ | 99% | Đã có API public/protected cho dashboard, form, danh mục public, kết quả public, lịch sử public, lỗi nguy cơ cao public, báo cáo public, CAPA public, lịch/phiên kiểm tra public, phân công public, chấm điểm, upload minh chứng điểm chấm, upload minh chứng CAPA, CAPA update, chốt/mở khóa kỳ, tạo phiên kiểm tra, tạo phân công, import prepare/commit và export Excel qua backend; audit log đã được map đúng cột database. |
 | Import Excel | 82% | Parser ưu tiên sheet phiếu kiểm tra/chấm điểm theo khoa/phòng, tạo import batch UUID, cảnh báo lệch số tiêu chí/tổng điểm, có màn hình đọc thử/rà soát cảnh báo trước khi commit `upsert_version`. |
@@ -20,7 +20,7 @@ Hiện tại ưu tiên đã chuyển sang hoàn thành phần lõi trước khi 
 ## Nguyên tắc quyền đang áp dụng
 
 - Ai có link web đều xem được dữ liệu công khai.
-- Dashboard, danh sách phiếu, lịch, kết quả chấm điểm, lịch sử kiểm tra, lỗi nguy cơ cao, CAPA, danh sách báo cáo đã xuất và tiến độ public không yêu cầu đăng nhập.
+- Dashboard, danh sách phiếu, lịch, CAPA, danh sách báo cáo đã xuất và tiến độ public không yêu cầu đăng nhập.
 - Thao tác ghi như chấm điểm, cập nhật CAPA, chốt/mở khóa kỳ, import Excel, commit import và export báo cáo đều kiểm tra quyền ở API/backend.
 - Khi có Supabase thật, API protected có thể nhận `Authorization: Bearer <access_token>` để lấy role từ bảng `profiles`.
 - Ở prototype, vẫn dùng được header `x-demo-role` để test nhanh quyền thao tác.
@@ -44,6 +44,11 @@ Hiện tại ưu tiên đã chuyển sang hoàn thành phần lõi trước khi 
 - Local API protected CAPA update hợp lệ với vai trò `CAPA`: trả về `200`.
 - Local API protected score thiếu lý do trừ điểm: trả về `422`.
 - Local API protected JSON không hợp lệ: trả về `400`.
+- Local API protected export/commit import có quyền nhưng JSON hỏng: trả về `400`.
+- Local API protected export với vai trò `Admin`: trả về `200` và đúng MIME Excel `.xlsx`.
+- Local API protected upload minh chứng điểm/CAPA không đăng nhập: kiểm tra quyền sớm và trả về `403`.
+- Vercel API protected assignments/sessions/periods/scores/CAPA với JSON không hợp lệ: đều trả về `400`.
+- Vercel API public dashboard/reports/CAPA/sessions/catalog/assignments/results/history/high-risk: đều trả về `200`.
 - Build đã kiểm tra TypeScript sau khi bổ sung schema, auth request, validation điểm, audit log row mapping và export Excel nhiều sheet.
 
 ## Việc tiếp theo
