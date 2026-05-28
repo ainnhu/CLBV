@@ -1,4 +1,5 @@
 import { userFromRequest } from "@/lib/api-auth";
+import { readOptionalJsonBody } from "@/lib/api-json";
 import { assertCanWrite } from "../../../../../services/access-control";
 import { exportFormReport } from "../../../../../services/repositories/reports-repository";
 
@@ -6,7 +7,9 @@ export async function POST(request: Request) {
   try {
     const user = await userFromRequest(request);
     assertCanWrite(user, "report:export");
-    const body = (await request.json().catch(() => ({}))) as { formTemplateId?: string };
+    const json = await readOptionalJsonBody(request);
+    if (!json.ok) return json.response;
+    const body = json.data as { formTemplateId?: string };
     const result = await exportFormReport(user, body.formTemplateId);
 
     return new Response(new Uint8Array(result.buffer), {
