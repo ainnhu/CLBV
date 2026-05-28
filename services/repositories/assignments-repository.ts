@@ -48,7 +48,7 @@ function validateAssignment(input: AssignmentInput) {
 }
 
 export async function createInspectionAssignments(user: SessionUser | null, input: AssignmentInput) {
-  assertCanWrite(user, "catalog:manage");
+  assertCanWrite(user, "assignment:manage");
   validateAssignment(input);
 
   const rows = input.formCriteriaItemIds.map((criteriaId) => ({
