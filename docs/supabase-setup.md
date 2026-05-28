@@ -28,11 +28,13 @@ Lưu ý: `service_role key` là khóa bí mật, chỉ đưa vào Vercel Environ
 4. Sao chép toàn bộ nội dung file vào SQL Editor.
 5. Bấm `Run`.
 
-Nếu bạn đã từng chạy schema cũ trước ngày `27/05/2026`, chạy thêm file migration này trong SQL Editor để bổ sung cột/policy còn thiếu mà không cần xóa database:
+Sau đó chạy thêm file migration sau trong SQL Editor. Bước này an toàn vì dùng `if not exists`, có thể chạy cho cả database mới và database đã từng chạy schema cũ:
 
 ```text
 database/migrations/20260527_core_fixes.sql
 ```
+
+Migration này bổ sung các phần lõi như `inspection_assignments.created_at`, `inspection_teams.is_active`, policy đọc minh chứng điểm chấm và index tra cứu phân công.
 
 Schema này tạo các bảng chính:
 
