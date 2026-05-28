@@ -53,6 +53,7 @@ function number(value: unknown) {
 
 function asciiKey(value: string) {
   return value
+    .replace(/[Đđ]/g, "D")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toUpperCase();
