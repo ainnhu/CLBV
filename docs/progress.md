@@ -28,6 +28,7 @@ Hiện tại ưu tiên đã chuyển sang hoàn thành phần lõi trước khi 
 ## Kiểm thử gần nhất
 
 - `npm.cmd run build`: đạt.
+- `node scripts/smoke-test.mjs https://clbv.vercel.app`: đạt `15/15`.
 - Local API public dashboard: trả về `200`.
 - Local API public reports: trả về `200`.
 - Local API public CAPA: trả về `200`.
