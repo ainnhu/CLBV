@@ -86,6 +86,39 @@ checks.push(
       const response = await fetch(`${baseUrl}/api/protected/capa/evidence`, { method: "POST" });
       expectStatus(response, 403);
     }
+  },
+  {
+    name: "catalog create without login returns 403",
+    run: async () => {
+      const response = await fetch(`${baseUrl}/api/protected/catalog`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ entity: "department", name: "Test", block: "Lâm sàng" })
+      });
+      expectStatus(response, 403);
+    }
+  },
+  {
+    name: "catalog invalid payload with Admin returns 422",
+    run: async () => {
+      const response = await fetch(`${baseUrl}/api/protected/catalog`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-demo-role": "Admin" },
+        body: JSON.stringify({ entity: "department", name: "", block: "Lâm sàng" })
+      });
+      expectStatus(response, 422);
+    }
+  },
+  {
+    name: "catalog create with Admin returns 200",
+    run: async () => {
+      const response = await fetch(`${baseUrl}/api/protected/catalog`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-demo-role": "Admin" },
+        body: JSON.stringify({ entity: "department", name: "Khoa smoke test", shortName: "SMOKE", block: "Lâm sàng", active: true })
+      });
+      expectStatus(response, 200);
+    }
   }
 );
 
