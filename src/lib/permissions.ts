@@ -29,8 +29,8 @@ const roleActions: Record<Role, ProtectedAction[]> = {
   "Thư ký đoàn": ["score:submit", "report:export", "capa:update"],
   "Trưởng đoàn": ["score:submit"],
   "Phó trưởng đoàn": ["score:submit"],
-  "Phòng KHTH": ["capa:update", "period:close", "period:unlock", "report:export", "catalog:manage", "excel:import"],
-  Admin: ["score:create", "score:update", "score:submit", "capa:update", "period:close", "period:unlock", "report:export", "catalog:manage", "excel:import"],
+  "Phòng KHTH": ["capa:update", "period:close", "period:unlock", "report:export", "catalog:manage", "excel:import", "assignment:manage"],
+  Admin: ["score:create", "score:update", "score:submit", "capa:update", "period:close", "period:unlock", "report:export", "catalog:manage", "excel:import", "assignment:manage"],
   CAPA: ["capa:update"],
   "Ban Giám đốc": []
 };
