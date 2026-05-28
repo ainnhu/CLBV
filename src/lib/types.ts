@@ -23,6 +23,7 @@ export type ProtectedAction =
   | "report:export"
   | "catalog:manage"
   | "excel:import"
+  | "assignment:manage"
   | "session:create";
 
 export type PeriodStatus = "đang mở" | "đã chốt" | "đã khóa";
