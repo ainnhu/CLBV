@@ -119,6 +119,103 @@ checks.push(
       });
       expectStatus(response, 200);
     }
+  },
+  {
+    name: "session create without login returns 403",
+    run: async () => {
+      const response = await fetch(`${baseUrl}/api/protected/sessions`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}"
+      });
+      expectStatus(response, 403);
+    }
+  },
+  {
+    name: "session bad JSON with Admin returns 400",
+    run: async () => {
+      const response = await fetch(`${baseUrl}/api/protected/sessions`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-demo-role": "Admin" },
+        body: "{\""
+      });
+      expectStatus(response, 400);
+    }
+  },
+  {
+    name: "session invalid payload with Admin returns 422",
+    run: async () => {
+      const response = await fetch(`${baseUrl}/api/protected/sessions`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-demo-role": "Admin" },
+        body: JSON.stringify({ periodId: "", inspectionDate: "2026-05-27", formTemplateId: "" })
+      });
+      expectStatus(response, 422);
+    }
+  },
+  {
+    name: "session create with Admin returns 200",
+    run: async () => {
+      const response = await fetch(`${baseUrl}/api/protected/sessions`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-demo-role": "Admin" },
+        body: JSON.stringify({
+          periodId: "period-2026-05",
+          inspectionDate: "2026-05-27",
+          formTemplateId: "form-template-1805-v03-oan-1-hanh-chinh-p-khth"
+        })
+      });
+      expectStatus(response, 200);
+    }
+  },
+  {
+    name: "assignment create without login returns 403",
+    run: async () => {
+      const response = await fetch(`${baseUrl}/api/protected/assignments`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}"
+      });
+      expectStatus(response, 403);
+    }
+  },
+  {
+    name: "assignment bad JSON with Admin returns 400",
+    run: async () => {
+      const response = await fetch(`${baseUrl}/api/protected/assignments`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-demo-role": "Admin" },
+        body: "{\""
+      });
+      expectStatus(response, 400);
+    }
+  },
+  {
+    name: "assignment invalid payload with Admin returns 422",
+    run: async () => {
+      const response = await fetch(`${baseUrl}/api/protected/assignments`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-demo-role": "Admin" },
+        body: JSON.stringify({ inspectionSessionId: "s1", userId: "u1", formCriteriaItemIds: [], blockType: "clinical" })
+      });
+      expectStatus(response, 422);
+    }
+  },
+  {
+    name: "assignment create with Admin returns 200",
+    run: async () => {
+      const response = await fetch(`${baseUrl}/api/protected/assignments`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-demo-role": "Admin" },
+        body: JSON.stringify({
+          inspectionSessionId: "s1",
+          userId: "u1",
+          formCriteriaItemIds: ["form-template-1805-v03-oan-1-hanh-chinh-p-khth-row-01"],
+          blockType: "administrative"
+        })
+      });
+      expectStatus(response, 200);
+    }
   }
 );
 
