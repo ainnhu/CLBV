@@ -10,6 +10,21 @@ export function getSupabaseMode(): SupabaseMode {
   return supabaseUrl && (serviceRoleKey || anonKey) ? "supabase" : "mock";
 }
 
+export function getSupabaseConfigStatus() {
+  const hasUrl = Boolean(supabaseUrl);
+  const hasAnonKey = Boolean(anonKey);
+  const hasServiceRoleKey = Boolean(serviceRoleKey);
+
+  return {
+    mode: getSupabaseMode(),
+    hasUrl,
+    hasAnonKey,
+    hasServiceRoleKey,
+    publicReadReady: hasUrl && (hasAnonKey || hasServiceRoleKey),
+    protectedWriteReady: hasUrl && hasServiceRoleKey
+  };
+}
+
 function buildUrl(path: string, query?: Record<string, QueryValue>) {
   if (!supabaseUrl) {
     throw new Error("Chưa cấu hình NEXT_PUBLIC_SUPABASE_URL.");
@@ -41,7 +56,10 @@ async function request<T>({
 }): Promise<T> {
   const key = useServiceRole ? serviceRoleKey : anonKey ?? serviceRoleKey;
   if (!key) {
-    throw new Error("Chưa cấu hình Supabase key.");
+    if (useServiceRole) {
+      throw new Error("Chưa cấu hình SUPABASE_SERVICE_ROLE_KEY cho thao tác ghi backend.");
+    }
+    throw new Error("Chưa cấu hình NEXT_PUBLIC_SUPABASE_ANON_KEY hoặc SUPABASE_SERVICE_ROLE_KEY.");
   }
 
   const response = await fetch(buildUrl(path, query), {
