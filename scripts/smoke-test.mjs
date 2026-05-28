@@ -106,6 +106,27 @@ checks.push(
     }
   },
   {
+    name: "protected system health without login returns 403",
+    run: async () => {
+      const response = await fetch(`${baseUrl}/api/protected/system/health`, { cache: "no-store" });
+      expectStatus(response, 403);
+    }
+  },
+  {
+    name: "protected system health with Admin returns 200",
+    run: async () => {
+      const response = await fetch(`${baseUrl}/api/protected/system/health`, {
+        headers: { "x-demo-role": "Admin" },
+        cache: "no-store"
+      });
+      expectStatus(response, 200);
+      const data = await response.json();
+      if (!data?.summary || !data?.supabase || !Array.isArray(data?.checks)) {
+        throw new Error("System health thiếu summary/supabase/checks.");
+      }
+    }
+  },
+  {
     name: "protected export with Admin returns xlsx",
     run: async () => {
       const response = await fetch(`${baseUrl}/api/protected/reports/export`, {
