@@ -59,6 +59,53 @@ checks.push(
     }
   },
   {
+    name: "protected import commit without login returns 403",
+    run: async () => {
+      const response = await fetch(`${baseUrl}/api/protected/import/commit`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(buildCommitImportPayload())
+      });
+      expectStatus(response, 403);
+    }
+  },
+  {
+    name: "protected import commit invalid payload with Admin returns 422",
+    run: async () => {
+      const response = await fetch(`${baseUrl}/api/protected/import/commit`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-demo-role": "Admin" },
+        body: JSON.stringify({ batchId: "batch-smoke", fileName: "file.xlsx", fileType: "DOAN_1_LS_CLS", templates: [], criteriaItems: [] })
+      });
+      expectStatus(response, 422);
+    }
+  },
+  {
+    name: "protected import commit warning without allow returns 422",
+    run: async () => {
+      const response = await fetch(`${baseUrl}/api/protected/import/commit`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-demo-role": "Admin" },
+        body: JSON.stringify(buildCommitImportPayload({
+          warnings: [{ type: "validation", sourceFile: "smoke.xlsx", sourceSheet: "P_KHTH", message: "Cảnh báo smoke test" }],
+          allowWarnings: false
+        }))
+      });
+      expectStatus(response, 422);
+    }
+  },
+  {
+    name: "protected import commit with Admin returns 200",
+    run: async () => {
+      const response = await fetch(`${baseUrl}/api/protected/import/commit`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-demo-role": "Admin" },
+        body: JSON.stringify(buildCommitImportPayload())
+      });
+      expectStatus(response, 200);
+    }
+  },
+  {
     name: "protected export with Admin returns xlsx",
     run: async () => {
       const response = await fetch(`${baseUrl}/api/protected/reports/export`, {
@@ -244,4 +291,53 @@ function expectStatus(response, expectedStatus) {
   if (response.status !== expectedStatus) {
     throw new Error(`HTTP ${response.status}, expected ${expectedStatus}`);
   }
+}
+
+function buildCommitImportPayload(overrides = {}) {
+  return {
+    batchId: "batch-smoke",
+    fileName: "1805_V03_DOAN_1_HANH_CHINH.xlsx",
+    fileType: "DOAN_1_HANH_CHINH",
+    templates: [
+      {
+        sourceFile: "1805_V03_DOAN_1_HANH_CHINH.xlsx",
+        sourceSheet: "P_KHTH",
+        formType: "HANH_CHINH",
+        departmentCode: "P_KHTH",
+        departmentName: "Kế hoạch tổng hợp",
+        inspectionTeam: "Đoàn 01",
+        totalScore: 100,
+        criteriaCount: 1,
+        headerFields: [
+          {
+            key: "department_name",
+            label: "Đơn vị được kiểm tra",
+            value: "Kế hoạch tổng hợp",
+            sourceCell: "B4",
+            orderIndex: 1
+          }
+        ]
+      }
+    ],
+    criteriaItems: [
+      {
+        sourceFile: "1805_V03_DOAN_1_HANH_CHINH.xlsx",
+        sourceSheet: "P_KHTH",
+        sourceRow: 7,
+        order: 1,
+        groupCode: "A",
+        groupName: "Quản lý kế hoạch",
+        content: "Tiêu chí smoke test",
+        evidenceRequired: "Minh chứng smoke test",
+        maxScore: 5,
+        team1Assignee: "Thành viên Đoàn 01",
+        team2Assignee: ""
+      }
+    ],
+    warnings: [],
+    allowWarnings: true,
+    importMode: "upsert_version",
+    version: "SMOKE",
+    ...overrides
+  };
 }
