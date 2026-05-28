@@ -4,6 +4,9 @@
 alter table if exists inspection_assignments
   add column if not exists created_at timestamptz not null default now();
 
+alter table if exists inspection_teams
+  add column if not exists is_active boolean not null default true;
+
 drop policy if exists public_read_score_attachments on score_attachments;
 create policy public_read_score_attachments on score_attachments
   for select
