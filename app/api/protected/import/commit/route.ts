@@ -1,4 +1,5 @@
 import { userFromRequest } from "@/lib/api-auth";
+import { readJsonBody } from "@/lib/api-json";
 import { assertCanWrite } from "../../../../../services/access-control";
 import { commitImportBatch, type CommitImportBatchInput } from "../../../../../services/repositories/import-repository";
 
@@ -6,7 +7,9 @@ export async function POST(request: Request) {
   try {
     const user = await userFromRequest(request);
     assertCanWrite(user, "excel:import");
-    const payload = (await request.json()) as Partial<CommitImportBatchInput>;
+    const json = await readJsonBody(request);
+    if (!json.ok) return json.response;
+    const payload = json.data as Partial<CommitImportBatchInput>;
 
     if (!payload.batchId || !payload.fileName || !payload.fileType) {
       return Response.json({ error: "Thiếu thông tin import batch." }, { status: 400 });
