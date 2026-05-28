@@ -1,16 +1,23 @@
 import { NextResponse } from "next/server";
 import { userFromRequest } from "@/lib/api-auth";
 import { readJsonBody } from "@/lib/api-json";
+import { validateInspectionSessionPayload } from "@/lib/validation";
+import { assertCanWrite } from "../../../../services/access-control";
 import { createInspectionSession } from "../../../../services/repositories/sessions-repository";
 
 export async function POST(request: Request) {
   try {
     const user = await userFromRequest(request);
+    assertCanWrite(user, "session:create");
     const payload = await readJsonBody(request);
     if (!payload.ok) {
       return payload.response;
     }
-    const result = await createInspectionSession(user, payload.data as Parameters<typeof createInspectionSession>[1]);
+    const validated = validateInspectionSessionPayload(payload.data);
+    if (!validated.ok) {
+      return NextResponse.json({ error: "Dữ liệu phiên kiểm tra không hợp lệ.", details: validated.errors }, { status: 422 });
+    }
+    const result = await createInspectionSession(user, validated.data);
 
     return NextResponse.json({
       status: "accepted",
