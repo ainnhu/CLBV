@@ -54,6 +54,26 @@ export type ValidatedCapaUpdateInput = {
   evidenceUrl?: string;
 };
 
+export type CatalogValidationInput = {
+  entity?: unknown;
+  id?: unknown;
+  name?: unknown;
+  shortName?: unknown;
+  block?: unknown;
+  description?: unknown;
+  active?: unknown;
+};
+
+export type ValidatedCatalogInput = {
+  entity: "department" | "inspection_team";
+  id?: string;
+  name?: string;
+  shortName?: string;
+  block?: "Lâm sàng" | "Cận lâm sàng" | "Hành chính";
+  description?: string;
+  active?: boolean;
+};
+
 const optionalText = z.preprocess((value) => {
   if (value == null) return undefined;
   const text = String(value).trim();
@@ -107,6 +127,47 @@ const capaUpdateSchema = z.object({
   evidenceUrl: optionalText
 });
 
+const catalogSchema = z.object({
+  entity: z.enum(["department", "inspection_team"], {
+    error: "Loại danh mục không hợp lệ."
+  }),
+  id: optionalText,
+  name: optionalText,
+  shortName: optionalText,
+  block: z.enum(["Lâm sàng", "Cận lâm sàng", "Hành chính"], {
+    error: "Khối khoa/phòng không hợp lệ."
+  }).optional(),
+  description: optionalText,
+  active: z.boolean().optional()
+});
+
+const catalogCreateSchema = catalogSchema.superRefine((data, context) => {
+  if (!data.name) {
+    context.addIssue({ code: "custom", path: ["name"], message: "Tên danh mục không được để trống." });
+  }
+  if (data.entity === "department" && !data.block) {
+    context.addIssue({ code: "custom", path: ["block"], message: "Khoa/phòng phải chọn khối." });
+  }
+});
+
+const catalogUpdateSchema = catalogSchema.superRefine((data, context) => {
+  if (!data.id) {
+    context.addIssue({ code: "custom", path: ["id"], message: "Thiếu mã danh mục cần cập nhật." });
+  }
+  if (data.entity === "department" && data.block === undefined && data.name === undefined && data.shortName === undefined && data.active === undefined) {
+    context.addIssue({ code: "custom", message: "Chưa có nội dung khoa/phòng cần cập nhật." });
+  }
+  if (data.entity === "inspection_team" && data.name === undefined && data.description === undefined && data.active === undefined) {
+    context.addIssue({ code: "custom", message: "Chưa có nội dung đoàn kiểm tra cần cập nhật." });
+  }
+});
+
+const catalogArchiveSchema = catalogSchema.superRefine((data, context) => {
+  if (!data.id) {
+    context.addIssue({ code: "custom", path: ["id"], message: "Thiếu mã danh mục cần ngưng sử dụng." });
+  }
+});
+
 export function validateScorePayload(input: unknown): ValidationResult<ValidatedScoreInput> {
   const parsed = scorePayloadSchema.safeParse(input);
   if (!parsed.success) {
@@ -121,6 +182,15 @@ export function validateScorePayload(input: unknown): ValidationResult<Validated
 
 export function validateCapaUpdatePayload(input: unknown): ValidationResult<ValidatedCapaUpdateInput> {
   const parsed = capaUpdateSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, errors: parsed.error.issues.map((issue) => issue.message) };
+  }
+  return { ok: true, data: parsed.data };
+}
+
+export function validateCatalogPayload(input: unknown, mode: "create" | "update" | "archive"): ValidationResult<ValidatedCatalogInput> {
+  const schema = mode === "create" ? catalogCreateSchema : mode === "archive" ? catalogArchiveSchema : catalogUpdateSchema;
+  const parsed = schema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, errors: parsed.error.issues.map((issue) => issue.message) };
   }
