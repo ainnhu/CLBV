@@ -12,10 +12,15 @@ export async function POST(request: Request) {
     if (!(file instanceof File)) {
       return Response.json({ error: "Vui lòng gửi file Excel ở field `file`." }, { status: 400 });
     }
+    const fileType = detectFileType(file.name);
+    const invalidFileMessage = validateImportFile(file, fileType);
+    if (invalidFileMessage) {
+      return Response.json({ error: invalidFileMessage }, { status: 422 });
+    }
 
     const result = await prepareImportWorkbook(user, {
       fileName: file.name,
-      fileType: detectFileType(file.name),
+      fileType,
       buffer: await file.arrayBuffer()
     });
 
@@ -49,6 +54,7 @@ export async function POST(request: Request) {
 
 function detectFileType(fileName: string) {
   const key = fileName
+    .replace(/[Đđ]/g, "D")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toUpperCase();
@@ -57,4 +63,18 @@ function detectFileType(fileName: string) {
   if (key.includes("HANH") && key.includes("DOAN 1")) return "DOAN_1_HANH_CHINH";
   if (key.includes("HANH") && key.includes("DOAN 2")) return "DOAN_2_HANH_CHINH";
   return "UNKNOWN";
+}
+
+function validateImportFile(file: File, fileType: string) {
+  const lowerName = file.name.toLowerCase();
+  if (!lowerName.endsWith(".xlsx") && !lowerName.endsWith(".xls")) {
+    return "Chỉ cho phép import file Excel định dạng .xlsx hoặc .xls.";
+  }
+  if (file.size > 30 * 1024 * 1024) {
+    return "File Excel import tối đa 30MB.";
+  }
+  if (fileType === "UNKNOWN") {
+    return "Không nhận diện được loại file. Tên file cần thể hiện Đoàn 1/Đoàn 2 và LS-CLS/Hành chính.";
+  }
+  return "";
 }
