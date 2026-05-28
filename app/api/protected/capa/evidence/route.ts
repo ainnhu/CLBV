@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { userFromRequest } from "@/lib/api-auth";
+import { assertCanWrite } from "../../../../../services/access-control";
 import { uploadCapaEvidence } from "../../../../../services/repositories/attachments-repository";
 
 export async function POST(request: Request) {
   try {
     const user = await userFromRequest(request);
+    assertCanWrite(user, "capa:update");
     const formData = await request.formData();
     const inspectionScoreId = String(formData.get("inspectionScoreId") ?? "");
     const file = formData.get("file");
