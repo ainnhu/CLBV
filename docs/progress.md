@@ -29,6 +29,7 @@ Hiện tại ưu tiên đã chuyển sang hoàn thành phần lõi trước khi 
 
 - `npm.cmd run build`: đạt.
 - Local `node scripts/smoke-test.mjs http://localhost:3114`: đạt `30/30`.
+- Vercel `node scripts/smoke-test.mjs https://clbv.vercel.app`: đạt `30/30`.
 - Local API public dashboard: trả về `200`.
 - Local API public reports: trả về `200`.
 - Local API public CAPA: trả về `200`.
