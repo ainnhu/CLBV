@@ -29,6 +29,7 @@ Hiện tại ưu tiên đã chuyển sang hoàn thành phần lõi trước khi 
 
 - `npm.cmd run build`: đạt.
 - Local `node scripts/smoke-test.mjs http://localhost:3112`: đạt `18/18`.
+- Vercel `node scripts/smoke-test.mjs https://clbv.vercel.app`: đạt `18/18`.
 - Local API public dashboard: trả về `200`.
 - Local API public reports: trả về `200`.
 - Local API public CAPA: trả về `200`.
@@ -37,6 +38,7 @@ Hiện tại ưu tiên đã chuyển sang hoàn thành phần lõi trước khi 
 - Local API public assignments: trả về `200`.
 - Local API public results/history/high-risk: trả về `200`.
 - Local API protected catalog: public catalog `200`, tạo không đăng nhập `403`, dữ liệu sai `422`, tạo/sửa/ngưng sử dụng bằng `Admin` đều `200`.
+- Vercel API protected catalog: tạo không đăng nhập `403`, dữ liệu sai `422`, tạo bằng `Admin` `200`, sửa bằng `Admin` `200`, ngưng sử dụng bằng `Admin` `200`.
 - Local API protected export không đăng nhập: trả về `403`.
 - Local API protected export với vai trò `Phòng KHTH`: trả về `200` và file `.xlsx`.
 - Local API protected upload minh chứng không đăng nhập: trả về `403`.
