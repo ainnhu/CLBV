@@ -74,6 +74,52 @@ export type ValidatedCatalogInput = {
   active?: boolean;
 };
 
+export type InspectionSessionValidationInput = {
+  periodId?: unknown;
+  inspectionDate?: unknown;
+  inspectionTeamId?: unknown;
+  departmentId?: unknown;
+  formTemplateId?: unknown;
+  receptionPerson?: unknown;
+  leaderName?: unknown;
+  startedAt?: unknown;
+  endedAt?: unknown;
+  preliminaryConclusion?: unknown;
+};
+
+export type ValidatedInspectionSessionInput = {
+  periodId: string;
+  inspectionDate: string;
+  inspectionTeamId?: string;
+  departmentId?: string;
+  formTemplateId: string;
+  receptionPerson?: string;
+  leaderName?: string;
+  startedAt?: string;
+  endedAt?: string;
+  preliminaryConclusion?: string;
+};
+
+export type AssignmentValidationInput = {
+  inspectionSessionId?: unknown;
+  inspectionTeamId?: unknown;
+  userId?: unknown;
+  formCriteriaItemIds?: unknown;
+  departmentId?: unknown;
+  blockType?: unknown;
+  note?: unknown;
+};
+
+export type ValidatedAssignmentInput = {
+  inspectionSessionId: string;
+  inspectionTeamId?: string;
+  userId: string;
+  formCriteriaItemIds: string[];
+  departmentId?: string;
+  blockType: "clinical" | "paraclinical" | "administrative";
+  note?: string;
+};
+
 const optionalText = z.preprocess((value) => {
   if (value == null) return undefined;
   const text = String(value).trim();
@@ -168,6 +214,39 @@ const catalogArchiveSchema = catalogSchema.superRefine((data, context) => {
   }
 });
 
+const isoDateText = (label: string) => requiredText(label).pipe(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, `${label} phải có dạng YYYY-MM-DD.`));
+
+const optionalTimeText = z.preprocess((value) => {
+  if (value == null) return undefined;
+  const text = String(value).trim();
+  return text || undefined;
+}, z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Thời gian phải có dạng HH:mm hoặc HH:mm:ss.").optional());
+
+const inspectionSessionSchema = z.object({
+  periodId: requiredText("Kỳ kiểm tra"),
+  inspectionDate: isoDateText("Ngày kiểm tra"),
+  inspectionTeamId: optionalText,
+  departmentId: optionalText,
+  formTemplateId: requiredText("Mẫu phiếu kiểm tra"),
+  receptionPerson: optionalText,
+  leaderName: optionalText,
+  startedAt: optionalTimeText,
+  endedAt: optionalTimeText,
+  preliminaryConclusion: optionalText
+});
+
+const assignmentSchema = z.object({
+  inspectionSessionId: requiredText("Phiên kiểm tra"),
+  inspectionTeamId: optionalText,
+  userId: requiredText("Người được phân công"),
+  formCriteriaItemIds: z.preprocess((value) => Array.isArray(value) ? value : [], z.array(requiredText("Tiêu chí được phân công")).min(1, "Phải chọn ít nhất 01 tiêu chí.")),
+  departmentId: optionalText,
+  blockType: z.enum(["clinical", "paraclinical", "administrative"], {
+    error: "Khối khoa/phòng không hợp lệ."
+  }),
+  note: optionalText
+});
+
 export function validateScorePayload(input: unknown): ValidationResult<ValidatedScoreInput> {
   const parsed = scorePayloadSchema.safeParse(input);
   if (!parsed.success) {
@@ -191,6 +270,22 @@ export function validateCapaUpdatePayload(input: unknown): ValidationResult<Vali
 export function validateCatalogPayload(input: unknown, mode: "create" | "update" | "archive"): ValidationResult<ValidatedCatalogInput> {
   const schema = mode === "create" ? catalogCreateSchema : mode === "archive" ? catalogArchiveSchema : catalogUpdateSchema;
   const parsed = schema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, errors: parsed.error.issues.map((issue) => issue.message) };
+  }
+  return { ok: true, data: parsed.data };
+}
+
+export function validateInspectionSessionPayload(input: unknown): ValidationResult<ValidatedInspectionSessionInput> {
+  const parsed = inspectionSessionSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, errors: parsed.error.issues.map((issue) => issue.message) };
+  }
+  return { ok: true, data: parsed.data };
+}
+
+export function validateAssignmentPayload(input: unknown): ValidationResult<ValidatedAssignmentInput> {
+  const parsed = assignmentSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, errors: parsed.error.issues.map((issue) => issue.message) };
   }
