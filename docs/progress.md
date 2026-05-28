@@ -50,6 +50,7 @@ Hiện tại ưu tiên đã chuyển sang hoàn thành phần lõi trước khi 
 - Local API protected upload minh chứng điểm/CAPA không đăng nhập: kiểm tra quyền sớm và trả về `403`.
 - Vercel API protected assignments/sessions/periods/scores/CAPA với JSON không hợp lệ: đều trả về `400`.
 - Vercel API public dashboard/reports/CAPA/sessions/catalog/assignments/results/history/high-risk: đều trả về `200`.
+- Vercel API protected import với file `1805_V03_ĐOÀN 2_LS-CLS.xlsx`: trả về `200`, nhận đúng `DOAN_2_LS_CLS`, `Đoàn 02`, 21 phiếu, 630 tiêu chí, 0 cảnh báo.
 - Build đã kiểm tra TypeScript sau khi bổ sung schema, auth request, validation điểm, audit log row mapping và export Excel nhiều sheet.
 
 ## Việc tiếp theo
