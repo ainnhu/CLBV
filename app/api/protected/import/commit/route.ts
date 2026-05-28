@@ -1,7 +1,8 @@
 import { userFromRequest } from "@/lib/api-auth";
 import { readJsonBody } from "@/lib/api-json";
+import { validateCommitImportPayload } from "@/lib/validation";
 import { assertCanWrite } from "../../../../../services/access-control";
-import { commitImportBatch, type CommitImportBatchInput } from "../../../../../services/repositories/import-repository";
+import { commitImportBatch } from "../../../../../services/repositories/import-repository";
 
 export async function POST(request: Request) {
   try {
@@ -9,26 +10,12 @@ export async function POST(request: Request) {
     assertCanWrite(user, "excel:import");
     const json = await readJsonBody(request);
     if (!json.ok) return json.response;
-    const payload = json.data as Partial<CommitImportBatchInput>;
-
-    if (!payload.batchId || !payload.fileName || !payload.fileType) {
-      return Response.json({ error: "Thiếu thông tin import batch." }, { status: 400 });
-    }
-    if (!Array.isArray(payload.templates) || !Array.isArray(payload.criteriaItems)) {
-      return Response.json({ error: "Thiếu dữ liệu phiếu hoặc tiêu chí cần ghi." }, { status: 400 });
+    const validated = validateCommitImportPayload(json.data);
+    if (!validated.ok) {
+      return Response.json({ error: "Dữ liệu commit import không hợp lệ.", details: validated.errors }, { status: 422 });
     }
 
-    const result = await commitImportBatch(user, {
-      batchId: payload.batchId,
-      fileName: payload.fileName,
-      fileType: payload.fileType,
-      templates: payload.templates,
-      criteriaItems: payload.criteriaItems,
-      warnings: payload.warnings ?? [],
-      allowWarnings: payload.allowWarnings,
-      importMode: payload.importMode,
-      version: payload.version
-    });
+    const result = await commitImportBatch(user, validated.data);
 
     return Response.json({
       status: "committed",
@@ -39,6 +26,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Không có quyền commit import batch.";
-    return Response.json({ error: message }, { status: message.includes("403") ? 403 : 500 });
+    const status = message.includes("403") ? 403 : message.includes("còn cảnh báo") ? 422 : 500;
+    return Response.json({ error: message }, { status });
   }
 }
