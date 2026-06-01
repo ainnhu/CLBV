@@ -723,9 +723,29 @@ export default function Home() {
                             <textarea
                               disabled={!writable}
                               className="mt-2 min-h-20 w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+                              defaultValue={score?.evidenceText ?? ""}
+                              placeholder="Minh chứng thực tế"
+                            />
+                            <textarea
+                              disabled={!writable}
+                              className="mt-2 min-h-20 w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
                               defaultValue={score?.correctionRequest ?? ""}
                               placeholder="Yêu cầu khắc phục"
                             />
+                            <div className="mt-2 grid grid-cols-2 gap-2">
+                              <input
+                                disabled={!writable}
+                                className="min-h-11 rounded-md border border-slate-300 px-3 text-sm disabled:bg-slate-100"
+                                defaultValue={score?.responsiblePerson ?? ""}
+                                placeholder="Người chịu trách nhiệm"
+                              />
+                              <input
+                                disabled={!writable}
+                                className="min-h-11 rounded-md border border-slate-300 px-3 text-sm disabled:bg-slate-100"
+                                defaultValue={score?.responsibleDepartment ?? ""}
+                                placeholder="Bộ phận chịu trách nhiệm"
+                              />
+                            </div>
                             <div className="mt-2 grid grid-cols-2 gap-2">
                               <input disabled={!writable} type="date" className="min-h-11 rounded-md border border-slate-300 px-3 text-sm disabled:bg-slate-100" defaultValue={score?.dueDate} />
                               <SelectField label="CAPA" value={score?.capaStatus ?? "Không áp dụng"} options={["Chưa thực hiện", "Đang thực hiện", "Đã hoàn thành", "Quá hạn", "Không áp dụng"]} />

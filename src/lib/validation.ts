@@ -205,8 +205,21 @@ const scorePayloadSchema = z.object({
   if (data.score < data.maxScore && !data.deductionReason && !data.finding) {
     context.addIssue({ code: "custom", path: ["deductionReason"], message: "Điểm thấp hơn điểm tối đa phải nhập phát hiện/tồn tại hoặc lý do trừ điểm." });
   }
-  if ((data.riskLevel === "Cao" || data.riskLevel === "Nghiêm trọng") && (!data.correctionRequest || !data.dueDate || (!data.responsiblePerson && !data.responsibleDepartment))) {
-    context.addIssue({ code: "custom", path: ["riskLevel"], message: "Nguy cơ cao/nghiêm trọng phải có yêu cầu khắc phục, thời hạn và người/bộ phận chịu trách nhiệm." });
+  
+  const isDeductionOrHighRisk = data.score < data.maxScore || data.riskLevel === "Cao" || data.riskLevel === "Nghiêm trọng";
+  if (isDeductionOrHighRisk) {
+    if (!data.evidenceText) {
+      context.addIssue({ code: "custom", path: ["evidenceText"], message: "Không đạt, có điểm trừ hoặc nguy cơ cao phải nhập minh chứng." });
+    }
+    if (!data.correctionRequest) {
+      context.addIssue({ code: "custom", path: ["correctionRequest"], message: "Không đạt, có điểm trừ hoặc nguy cơ cao phải nhập yêu cầu khắc phục." });
+    }
+    if (!data.dueDate) {
+      context.addIssue({ code: "custom", path: ["dueDate"], message: "Không đạt, có điểm trừ hoặc nguy cơ cao phải nhập thời hạn hoàn thành." });
+    }
+    if (!data.responsiblePerson && !data.responsibleDepartment) {
+      context.addIssue({ code: "custom", path: ["responsiblePerson"], message: "Không đạt, có điểm trừ hoặc nguy cơ cao phải nhập người hoặc bộ phận chịu trách nhiệm." });
+    }
   }
 });
 

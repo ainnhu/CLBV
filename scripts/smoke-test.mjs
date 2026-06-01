@@ -104,13 +104,13 @@ const checks = [
     run: async () => expectStatus(await fetch(`${baseUrl}/api/protected/capa/evidence`, { method: "POST" }), 403)
   },
   uploadCheck("CAPA evidence with CAPA role returns data preview", "/api/protected/capa/evidence", "evidence", "evidenceUrl", roleHeaders("CAPA"), "capa-smoke.png", "capa smoke"),
-  jsonCheck("catalog create without login returns 403", "/api/protected/catalog", { entity: "department", name: "Test", block: "Lam sang" }, {}, 403),
-  jsonCheck("catalog invalid payload with Admin returns 422", "/api/protected/catalog", { entity: "department", name: "", block: "Lam sang" }, adminHeaders(), 422),
+  jsonCheck("catalog create without login returns 403", "/api/protected/catalog", { entity: "department", name: "Test", block: "Lâm sàng" }, {}, 403),
+  jsonCheck("catalog invalid payload with Admin returns 422", "/api/protected/catalog", { entity: "department", name: "", block: "Lâm sàng" }, adminHeaders(), 422),
   jsonCheck("catalog create with Admin returns 200", "/api/protected/catalog", {
     entity: "department",
     name: "Khoa smoke test",
     shortName: "SMOKE",
-    block: "Lam sang",
+    block: "Lâm sàng",
     active: true
   }, adminHeaders(), 200),
   jsonCheck("session create without login returns 403", "/api/protected/sessions", {}, {}, 403),
@@ -247,7 +247,7 @@ function buildValidScorePayload() {
 function buildValidCapaPayload() {
   return {
     inspectionScoreId: "score-smoke",
-    status: "Dang thuc hien",
+    status: "Đang thực hiện",
     updateContent: "Cap nhat khac phuc smoke test",
     evidenceUrl: "https://clbv.vercel.app/"
   };
@@ -265,7 +265,7 @@ function buildCommitImportPayload(overrides = {}) {
         formType: "HANH_CHINH",
         departmentCode: "P_KHTH",
         departmentName: "Ke hoach tong hop",
-        inspectionTeam: "Doan 01",
+        inspectionTeam: "Đoàn 01",
         totalScore: 100,
         criteriaCount: 1,
         headerFields: [

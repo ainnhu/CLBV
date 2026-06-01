@@ -79,11 +79,21 @@ function validateScoreBusinessRules(input: SaveScoreInput) {
   if (input.score < input.maxScore && !input.deductionReason && !input.finding) {
     throw new Error("Điểm thấp hơn điểm tối đa phải nhập phát hiện/tồn tại hoặc lý do trừ điểm.");
   }
-  if (
-    (input.riskLevel === "Cao" || input.riskLevel === "Nghiêm trọng") &&
-    (!input.correctionRequest || !input.dueDate || (!input.responsiblePerson && !input.responsibleDepartment))
-  ) {
-    throw new Error("Nguy cơ cao/nghiêm trọng phải có yêu cầu khắc phục, thời hạn và người/bộ phận chịu trách nhiệm.");
+  
+  const isDeductionOrHighRisk = input.score < input.maxScore || input.riskLevel === "Cao" || input.riskLevel === "Nghiêm trọng";
+  if (isDeductionOrHighRisk) {
+    if (!input.evidenceText) {
+      throw new Error("Không đạt, có điểm trừ hoặc nguy cơ cao phải nhập minh chứng.");
+    }
+    if (!input.correctionRequest) {
+      throw new Error("Không đạt, có điểm trừ hoặc nguy cơ cao phải nhập yêu cầu khắc phục.");
+    }
+    if (!input.dueDate) {
+      throw new Error("Không đạt, có điểm trừ hoặc nguy cơ cao phải nhập thời hạn hoàn thành.");
+    }
+    if (!input.responsiblePerson && !input.responsibleDepartment) {
+      throw new Error("Không đạt, có điểm trừ hoặc nguy cơ cao phải nhập người hoặc bộ phận chịu trách nhiệm.");
+    }
   }
 }
 
