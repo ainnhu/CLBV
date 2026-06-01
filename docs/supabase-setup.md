@@ -89,6 +89,7 @@ Với giai đoạn MVP:
 
 - `report-exports` nên đặt public để người xem có link tải báo cáo đã xuất.
 - `score-attachments` và `capa-evidence` có thể để private nếu sau này cần bảo mật minh chứng.
+- Nếu muốn dùng bucket private cho file báo cáo hoặc minh chứng, đặt `SUPABASE_STORAGE_SIGNED_URL_SECONDS` lớn hơn `0` để backend tạo signed URL khi upload.
 
 ## 6. Tạo file `.env.local`
 
@@ -104,6 +105,7 @@ AUTH_SECRET=chuoi-bi-mat-tu-dat
 REPORT_EXPORT_BUCKET=report-exports
 SCORE_ATTACHMENT_BUCKET=score-attachments
 CAPA_EVIDENCE_BUCKET=capa-evidence
+SUPABASE_STORAGE_SIGNED_URL_SECONDS=0
 
 INITIAL_ADMIN_USERNAME=admin
 INITIAL_ADMIN_PASSWORD=123456
