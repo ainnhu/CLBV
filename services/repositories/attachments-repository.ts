@@ -4,6 +4,7 @@ import { getSupabaseMode, supabaseRest } from "../supabase-rest";
 import { uploadBufferToSupabaseStorage } from "../supabase-storage";
 
 const maxEvidenceFileSize = 10 * 1024 * 1024;
+const maxInlinePreviewFileSize = 256 * 1024;
 const allowedEvidenceTypes = new Set([
   "image/jpeg",
   "image/png",
@@ -40,14 +41,17 @@ export async function uploadScoreAttachment({
   });
 
   if (getSupabaseMode() === "mock") {
+    const preview = await buildInlinePreview(file);
     return {
       mode: "mock" as const,
       attachment: {
         inspectionScoreId,
         fileName: file.name,
         fileType: file.type,
-        downloadUrl: "mock://evidence-text-or-file-preview",
-        note: "Chưa cấu hình Supabase Storage nên chỉ kiểm tra quyền và validate file."
+        fileSize: file.size,
+        downloadUrl: preview.url,
+        previewAvailable: preview.available,
+        note: preview.message
       },
       auditLog
     };
@@ -111,14 +115,17 @@ export async function uploadCapaEvidence({
   });
 
   if (getSupabaseMode() === "mock") {
+    const preview = await buildInlinePreview(file);
     return {
       mode: "mock" as const,
       evidence: {
         inspectionScoreId,
         fileName: file.name,
         fileType: file.type,
-        evidenceUrl: "mock://capa-evidence-preview",
-        note: "Chưa cấu hình Supabase Storage nên chỉ kiểm tra quyền và validate file."
+        fileSize: file.size,
+        evidenceUrl: preview.url,
+        previewAvailable: preview.available,
+        note: preview.message
       },
       auditLog
     };
@@ -172,4 +179,22 @@ function sanitizeFileName(fileName: string) {
     .replace(/[^a-zA-Z0-9_.-]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .toLowerCase();
+}
+
+async function buildInlinePreview(file: File) {
+  if (file.size > maxInlinePreviewFileSize) {
+    return {
+      available: false,
+      url: "",
+      message: `File đã được kiểm tra hợp lệ. Chế độ dữ liệu mẫu không nhúng file lớn hơn ${Math.round(maxInlinePreviewFileSize / 1024)}KB vào phản hồi API.`
+    };
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const contentType = file.type || "application/octet-stream";
+  return {
+    available: true,
+    url: `data:${contentType};base64,${buffer.toString("base64")}`,
+    message: "File đã được kiểm tra hợp lệ và nhúng vào phản hồi API ở chế độ dữ liệu mẫu."
+  };
 }
