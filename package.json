@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "smoke:test": "node scripts/smoke-test.mjs",
+    "schema:check": "node scripts/check-supabase-schema.mjs",
     "seed:supabase": "node scripts/seed-supabase-demo-users.mjs"
   },
   "dependencies": {
