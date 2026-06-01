@@ -53,9 +53,12 @@ function number(value: unknown) {
 
 function asciiKey(value: string) {
   return value
-    .replace(/[Đđ]/g, "D")
+    .replace(/\u0110|\u0111/g, "D")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/_+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
     .toUpperCase();
 }
 
