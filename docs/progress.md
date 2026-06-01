@@ -11,7 +11,8 @@ Trọng tâm hiện tại là hoàn thiện phần lõi trước khi chỉnh sâ
 | Nguồn dữ liệu | 85% | Đã phân tích PDF và 04 file Excel; dữ liệu đang bám theo sheet phiếu nguồn, giữ `source_file`, `source_sheet`, `source_row`, loại phiếu, khoa/phòng, đoàn và phiên bản. |
 | Database và bảo mật | 84% | Đã có schema Supabase theo hướng public-read/protected-write, RLS, migration lõi, bảng profile public, phân công, report file, audit log và API health protected không lộ khóa bí mật. |
 | Auth/API quyền | 94% | API protected hỗ trợ demo role và Bearer token Supabase khi cấu hình thật; request ghi kiểm tra quyền backend trước khi xử lý body/file; JSON hỏng trả `400`, dữ liệu sai nghiệp vụ trả `422`. |
-| API nghiệp vụ | 99% | Đã có API public/protected cho dashboard, forms, catalog, results, history, high-risk, reports, CAPA, sessions, assignments, scores, attachments, import, export, periods và system health. Upload minh chứng ở chế độ dữ liệu mẫu trả `data:` URL thật cho file nhỏ, không còn dùng URL giả. |
+| API nghiệp vụ | 99% | Đã có API public/protected cho dashboard, forms, catalog, results, history, high-risk, reports, CAPA, sessions, assignments, scores, attachments, import, export, periods và system health. |
+| Storage | 82% | Upload lên Supabase Storage đã hỗ trợ public URL và signed URL tùy chọn qua `SUPABASE_STORAGE_SIGNED_URL_SECONDS`; system health đã kiểm tra đúng `SCORE_ATTACHMENT_BUCKET`, `REPORT_EXPORT_BUCKET`, `CAPA_EVIDENCE_BUCKET`. |
 | Import Excel | 84% | Parser ưu tiên sheet phiếu kiểm tra/chấm điểm theo khoa/phòng, nhận diện loại file, cảnh báo lệch tổng điểm/số tiêu chí, có commit import theo quyền Admin/Phòng KHTH. |
 | Excel báo cáo | 78% | Export đã tạo workbook nhiều sheet: dashboard thống kê, tổng hợp điểm, phiếu chi tiết, chi tiết tiêu chí, lỗi/điểm trừ, phát hiện/khắc phục, CAPA, lỗi nguy cơ cao, phân công thành viên và căn cứ. |
 | Giao diện | 52% | Đã đủ màn hình chính và điều hướng dạng tab động. Giao diện còn cần tinh giản sau khi lõi ổn định. |
@@ -20,13 +21,12 @@ Trọng tâm hiện tại là hoàn thiện phần lõi trước khi chỉnh sâ
 ## Kiểm thử gần nhất
 
 - `npm.cmd run build`: đạt.
-- Local `node scripts/smoke-test.mjs http://localhost:3114`: đạt `34/34` ở lần chạy có server local.
 - Vercel `node scripts/smoke-test.mjs https://clbv.vercel.app`: đạt `34/34`.
 - Public read API trên Vercel: dashboard, reports, CAPA, sessions, catalog, assignments, results, history, high-risk đều trả `200`.
 - Protected API trên Vercel: không đăng nhập trả `403` cho thao tác ghi/export/import/upload; JSON hỏng trả `400`; payload sai nghiệp vụ trả `422`; payload hợp lệ đúng quyền trả `200`.
+- System health protected: không đăng nhập trả `403`; Admin trả `200`, có `summary`, `supabase`, `checks`, `storage.scoreAttachmentBucket`, không còn field cấu hình sai `scoreEvidenceBucket`.
 - Upload minh chứng điểm và minh chứng CAPA: không đăng nhập trả `403`; đúng quyền trả `200` và có `data:image/png;base64,...` trong chế độ dữ liệu mẫu.
 - Export Excel protected bằng vai trò Admin: trả `200` và đúng MIME `.xlsx`.
-- System health protected: không đăng nhập trả `403`; Admin trả `200` với `summary`, `supabase`, `checks`.
 
 ## Việc tiếp theo
 
