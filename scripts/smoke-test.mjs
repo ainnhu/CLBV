@@ -16,6 +16,12 @@ const checks = [
     name: `public GET ${path}`,
     run: async () => expectStatus(await fetch(`${baseUrl}${path}`, { cache: "no-store" }), 200)
   })),
+  rawJsonCheck("auth login bad JSON returns 400", "/api/auth/login", "{\"", {}, 400),
+  jsonCheck("auth login invalid payload returns 422", "/api/auth/login", { username: "", password: "" }, {}, 422),
+  jsonCheck("auth login unavailable or invalid credentials handled", "/api/auth/login", {
+    username: "admin",
+    password: "wrong-password"
+  }, {}, [401, 503]),
   jsonCheck("protected export without login returns 403", "/api/protected/reports/export", {}, {}, 403),
   rawJsonCheck("protected export bad JSON with Admin returns 400", "/api/protected/reports/export", "{\"", adminHeaders(), 400),
   rawJsonCheck("protected import commit bad JSON with Admin returns 400", "/api/protected/import/commit", "{\"", adminHeaders(), 400),
@@ -207,8 +213,9 @@ function postJson(path, body, headers = {}) {
 }
 
 function expectStatus(response, expectedStatus) {
-  if (response.status !== expectedStatus) {
-    throw new Error(`HTTP ${response.status}, expected ${expectedStatus}`);
+  const allowedStatuses = Array.isArray(expectedStatus) ? expectedStatus : [expectedStatus];
+  if (!allowedStatuses.includes(response.status)) {
+    throw new Error(`HTTP ${response.status}, expected ${allowedStatuses.join(" or ")}`);
   }
 }
 
