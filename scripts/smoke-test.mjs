@@ -124,6 +124,9 @@ checks.push(
       if (!data?.summary || !data?.supabase || !Array.isArray(data?.checks)) {
         throw new Error("System health thiếu summary/supabase/checks.");
       }
+      if (!data?.storage?.scoreAttachmentBucket || data?.storage?.scoreEvidenceBucket) {
+        throw new Error("System health chưa dùng đúng cấu hình SCORE_ATTACHMENT_BUCKET.");
+      }
     }
   },
   {
