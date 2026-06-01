@@ -149,10 +149,46 @@ checks.push(
     }
   },
   {
+    name: "score attachment with Admin returns data preview",
+    run: async () => {
+      const formData = new FormData();
+      formData.set("inspectionScoreId", "score-smoke");
+      formData.set("file", new Blob(["minh chung smoke"], { type: "image/png" }), "minh-chung-smoke.png");
+      const response = await fetch(`${baseUrl}/api/protected/attachments`, {
+        method: "POST",
+        headers: { "x-demo-role": "Admin" },
+        body: formData
+      });
+      expectStatus(response, 200);
+      const data = await response.json();
+      if (!data?.attachment?.downloadUrl?.startsWith("data:image/png;base64,")) {
+        throw new Error("Score attachment không trả data URL hợp lệ.");
+      }
+    }
+  },
+  {
     name: "CAPA evidence without login returns 403",
     run: async () => {
       const response = await fetch(`${baseUrl}/api/protected/capa/evidence`, { method: "POST" });
       expectStatus(response, 403);
+    }
+  },
+  {
+    name: "CAPA evidence with CAPA role returns data preview",
+    run: async () => {
+      const formData = new FormData();
+      formData.set("inspectionScoreId", "score-smoke");
+      formData.set("file", new Blob(["capa smoke"], { type: "image/png" }), "capa-smoke.png");
+      const response = await fetch(`${baseUrl}/api/protected/capa/evidence`, {
+        method: "POST",
+        headers: { "x-demo-role": "CAPA" },
+        body: formData
+      });
+      expectStatus(response, 200);
+      const data = await response.json();
+      if (!data?.evidence?.evidenceUrl?.startsWith("data:image/png;base64,")) {
+        throw new Error("CAPA evidence không trả data URL hợp lệ.");
+      }
     }
   },
   {
