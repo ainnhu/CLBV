@@ -9,7 +9,7 @@ Trọng tâm hiện tại là hoàn thiện phần lõi trước khi chỉnh sâ
 | Nhóm việc | Tiến độ | Trạng thái |
 | --- | ---: | --- |
 | Nguồn dữ liệu | 85% | Đã phân tích PDF và 04 file Excel; dữ liệu đang bám theo sheet phiếu nguồn, giữ `source_file`, `source_sheet`, `source_row`, loại phiếu, khoa/phòng, đoàn và phiên bản. |
-| Database và bảo mật | 85% | Đã có schema Supabase theo hướng public-read/protected-write, RLS, migration lõi, bảng profile public, phân công, report file, audit log và API health protected không lộ khóa bí mật. |
+| Database và bảo mật | 86% | Đã có schema Supabase theo hướng public-read/protected-write, RLS, migration lõi, bảng profile public, phân công, report file, audit log, API health protected và script kiểm tra schema/RLS tĩnh. |
 | Auth/API quyền | 95% | API protected hỗ trợ demo role và Bearer token Supabase khi cấu hình thật; request ghi kiểm tra quyền backend trước khi xử lý body/file; JSON hỏng trả `400`, dữ liệu sai nghiệp vụ trả `422`, không đủ quyền trả `403`. |
 | API nghiệp vụ | 99% | Đã có API public/protected cho dashboard, forms, catalog, results, history, high-risk, reports, CAPA, sessions, assignments, scores, attachments, import, export, periods và system health. |
 | Storage | 82% | Upload lên Supabase Storage đã hỗ trợ public URL và signed URL tùy chọn qua `SUPABASE_STORAGE_SIGNED_URL_SECONDS`; system health đã kiểm tra đúng `SCORE_ATTACHMENT_BUCKET`, `REPORT_EXPORT_BUCKET`, `CAPA_EVIDENCE_BUCKET`. |
@@ -20,6 +20,7 @@ Trọng tâm hiện tại là hoàn thiện phần lõi trước khi chỉnh sâ
 
 ## Kiểm thử gần nhất
 
+- `npm.cmd run schema:check`: đạt `106/106`, kiểm tra đủ bảng, enum, RLS, policy public-read/protected-write, constraint điểm, grant anon chỉ đọc và policy score theo phân công.
 - `npm.cmd run build`: đạt.
 - Vercel `node scripts/smoke-test.mjs https://clbv.vercel.app`: đạt `46/46`.
 - Public read API trên Vercel: dashboard, reports, CAPA, sessions, catalog, assignments, results, history, high-risk đều trả `200` khi không đăng nhập.
