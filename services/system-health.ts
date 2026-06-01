@@ -1,12 +1,9 @@
 import { getSupabaseConfigStatus, supabaseRest } from "./supabase-rest";
+import { getStorageConfigStatus } from "./supabase-storage";
 
 export async function getProtectedSystemHealth() {
   const supabase = getSupabaseConfigStatus();
-  const storage = {
-    reportExportBucket: process.env.REPORT_EXPORT_BUCKET || "report-exports",
-    scoreEvidenceBucket: process.env.SCORE_EVIDENCE_BUCKET || "score-evidence",
-    capaEvidenceBucket: process.env.CAPA_EVIDENCE_BUCKET || "capa-evidence"
-  };
+  const storage = getStorageConfigStatus();
 
   const checks = [
     {
@@ -30,8 +27,15 @@ export async function getProtectedSystemHealth() {
     },
     {
       key: "storage_bucket_names",
-      ok: Boolean(storage.reportExportBucket && storage.scoreEvidenceBucket && storage.capaEvidenceBucket),
+      ok: Boolean(storage.reportExportBucket && storage.scoreAttachmentBucket && storage.capaEvidenceBucket),
       message: "Tên bucket Storage đã có giá trị mặc định, có thể thay bằng biến môi trường trên Vercel."
+    },
+    {
+      key: "storage_signed_url_policy",
+      ok: true,
+      message: storage.signedUrlEnabled
+        ? `Đã bật signed URL cho Storage, thời hạn ${storage.signedUrlExpiresInSeconds} giây.`
+        : "Storage đang dùng public object URL. Bật SUPABASE_STORAGE_SIGNED_URL_SECONDS nếu dùng bucket private."
     }
   ];
 
