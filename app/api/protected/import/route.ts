@@ -53,16 +53,23 @@ export async function POST(request: Request) {
 }
 
 function detectFileType(fileName: string) {
-  const key = fileName
-    .replace(/[Đđ]/g, "D")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toUpperCase();
+  const key = normalizeVietnameseKey(fileName);
   if (key.includes("LS-CLS") && key.includes("DOAN 1")) return "DOAN_1_LS_CLS";
   if (key.includes("LS-CLS") && key.includes("DOAN 2")) return "DOAN_2_LS_CLS";
   if (key.includes("HANH") && key.includes("DOAN 1")) return "DOAN_1_HANH_CHINH";
   if (key.includes("HANH") && key.includes("DOAN 2")) return "DOAN_2_HANH_CHINH";
   return "UNKNOWN";
+}
+
+function normalizeVietnameseKey(value: string) {
+  return value
+    .replace(/\u0110|\u0111/g, "D")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/_+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase();
 }
 
 function validateImportFile(file: File, fileType: string) {
