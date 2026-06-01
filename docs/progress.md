@@ -14,12 +14,13 @@ Trọng tâm hiện tại là hoàn thiện phần lõi trước khi chỉnh sâ
 | API nghiệp vụ | 99% | Đã có API public/protected cho dashboard, forms, catalog, results, history, high-risk, reports, CAPA, sessions, assignments, scores, attachments, import, export, periods và system health. |
 | Storage | 82% | Upload lên Supabase Storage đã hỗ trợ public URL và signed URL tùy chọn qua `SUPABASE_STORAGE_SIGNED_URL_SECONDS`; system health đã kiểm tra đúng `SCORE_ATTACHMENT_BUCKET`, `REPORT_EXPORT_BUCKET`, `CAPA_EVIDENCE_BUCKET`. |
 | Import Excel | 87% | Parser ưu tiên sheet phiếu kiểm tra/chấm điểm theo khoa/phòng, nhận diện loại file, cảnh báo lệch tổng điểm/số tiêu chí, có commit import theo quyền Admin/Phòng KHTH; đã chuẩn hóa nhận diện tên file tiếng Việt có `Đ/đ`, dấu, gạch dưới và khoảng trắng trước khi import thật. |
-| Excel báo cáo | 78% | Export đã tạo workbook nhiều sheet: dashboard thống kê, tổng hợp điểm, phiếu chi tiết, chi tiết tiêu chí, lỗi/điểm trừ, phát hiện/khắc phục, CAPA, lỗi nguy cơ cao, phân công thành viên và căn cứ. |
+| Excel báo cáo | 82% | Export đã tạo workbook nhiều sheet và có script kiểm tra workbook thật từ API: đủ 10 sheet nghiệp vụ, đúng MIME `.xlsx`, có sheet phiếu chi tiết, sheet tiêu chí và dấu nguồn `source_file`, `source_sheet`, `source_row`. |
 | Giao diện | 52% | Đã đủ màn hình chính và điều hướng dạng tab động. Giao diện còn cần tinh giản sau khi lõi ổn định. |
 | Deploy Vercel | 100% | Đã deploy tại `https://clbv.vercel.app/`; GitHub `main` tự kích hoạt Vercel deploy. |
 
 ## Kiểm thử gần nhất
 
+- `npm.cmd run export:check`: đạt trên production, file `.xlsx` có 10 sheet bắt buộc: `DASHBOARD_THONG_KE`, `TONG_HOP_DIEM`, `PHIEU_CHI_TIET`, `CHI_TIET_TIEU_CHI`, `CHI_TIET_LOI`, `PHAT_HIEN_VA_KHAC_PHUC`, `CAPA`, `LOI_NGUY_CO_CAO`, `PHAN_CONG_THANH_VIEN`, `CAN_CU`; phiếu chi tiết và tiêu chí có dấu nguồn.
 - `npm.cmd run excel:check`: đạt, xác nhận 04 workbook nguồn, 58 sheet phiếu và 1.580 dòng tiêu chí: Đoàn 1 LS-CLS 21 phiếu/630 tiêu chí, Đoàn 2 LS-CLS 21 phiếu/630 tiêu chí, Đoàn 1 hành chính 8 phiếu/160 tiêu chí, Đoàn 2 hành chính 8 phiếu/160 tiêu chí.
 - `npm.cmd run api:check`: đạt `81/81`, kiểm tra public route không bắt đăng nhập, protected route có `userFromRequest`, có kiểm quyền và kiểm quyền trước khi đọc body/file.
 - `npm.cmd run schema:check`: đạt `106/106`, kiểm tra đủ bảng, enum, RLS, policy public-read/protected-write, constraint điểm, grant anon chỉ đọc và policy score theo phân công.
